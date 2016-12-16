@@ -1,3 +1,7 @@
+#ifndef __CINT__
+#include "RooGlobalFunc.h"
+#endif
+
 #include "TROOT.h"
 #include "TTree.h"
 #include "TSystem.h"
@@ -15,9 +19,17 @@
 #include "THStack.h"
 #include "TMath.h"
 
+#include "RooRealVar.h"
+#include "RooDataSet.h"
+#include "RooGaussian.h"
+#include "RooPlot.h"
+#include "TAxis.h"
 
-using namespace std;
 
+using std::cout;
+using std::cin;
+using std::endl;
+using namespace RooFit;
 
 Double_t Acceptance_lineargaus(Double_t offset, Double_t linear, Double_t amplitude, Double_t mean, Double_t sigma, Double_t peak_window)
 {
@@ -44,14 +56,14 @@ Double_t Acceptance_lineardoublegaus(Double_t offset, Double_t linear, Double_t 
   Double_t signal2 = 0.5 * amplitude2 * ((sigma2 * TMath::Sqrt(TMath::Pi()/2)) * TMath::Erf((peak_window/2.0 - mean2 + mean1)/(sigma2 / TMath::Sqrt(2.0))) - (sigma2 * TMath::Sqrt(TMath::Pi()/2)) * TMath::Erf((-peak_window/2.0 -mean2 +mean1)/(sigma2 / TMath::Sqrt(2.0))));
  
   Double_t signal = signal1 + signal2;
-  cout << signal1 << "\t" << signal2 << "\t" << signal << endl;
+  cout << signal1 << "\t" << signal2 << "\t" << signal << "\t" << background << endl;
   return (signal / (background+signal));
 }
 
 void plot_AllString_calibrationPeaks() {
 
   int nbins = 988; //988, 247, 19
-  int energy_bins = 100;
+  int energy_bins = 200;
   double time_scaling = 0.01115; // scale from events to events per hour
 
   double eventsToCalibrate = 50;
@@ -83,11 +95,74 @@ void plot_AllString_calibrationPeaks() {
   TF1 * lineargaus = new TF1("linear+gaus", "[0] + [4] * x + [1] * exp(-0.5*((x-[2])/[3])**2)", 0, 5);
   TF2 * lineardoublegaus = new TF1("linear+doublegaus", "[0] + [7] * x + [1] * exp(-0.5*((x-[2])/[3])**2) + [4]*[1] * exp(-0.5*((x-[5]*[2])/[6])**2)", 0, 5);
 
-  TCanvas * c4 = new TCanvas("c4", "c4", 1200, 1000);
+
+  // begin RooFits
+
+  // Single Gaussian
+  RooRealVar x("x", "x", 0, 3000);
+  RooRealVar mean("mean", "mean of gaussian", 10, 0, 3000);
+  RooRealVar sigma("sigma", "width of gaussian", 1, 0, 10);
+
+  RooGaussian gauss("gauss", "gaussian PDF", x, mean, sigma);
+
+  // Second Gaussian
+  RooRealVar mean2("mean2", "mean of secondary gaussian", 0, 0, 3000);
+  RooRealVar sigma2("sigma2", "sigma of secondary gaussian", 1, 0, 10);
+  
+  RooGaussian gauss2("gauss2", "secondary gaussian PDF", x, mean2, sigma2);
+  
+  // Linear background
+  RooRealVar a0("a0", "a0", 1, -10000, 10000);
+  RooRealVar a1("a1", "a1", 1, -10000, 10000);
+  RooPolynomial p2("p2", "p2", x, RooArgList(a0, a1), 0);
+ 
+  //Combined gauss + linear
+  RooRealVar gaussfrac("gfrac", "fraction of gauss", 0.8, 0, 1);
+  RooAddPdf gausslin("gausslin", "gauss+p2", RooArgList(gauss, p2), RooArgList(gaussfrac));
+
+  //Combined doublegaus
+  RooRealVar gaus1frac("g1frac", "fraction of main gaussian", 0.8, 0, 1);
+  RooAddPdf doublegaus("doublegaus", "gauss+gauss2", RooArgList(gauss, gauss2), RooArgList(gaus1frac));
+
+  //Combined doublegaus + linear
+  RooRealVar doublegausfrac("doublegausfrac", "fraction of gaussians", 0.8, 0, 1);
+  RooAddPdf doublegausslin("doublegausslin", "doublegaus+p2", RooArgList(doublegaus, p2), RooArgList(doublegausfrac));
+
+
+  TCanvas * c5 = new TCanvas("c5", "Roofit", 1200, 1000);
+  c5->cd();
+  c5->Divide(3,2);
+  c5->cd(1);
+  t1->Draw("Ener1 >> Energy2615", multiplicity, "goff");
+  x.setRange(2615 - peak_window/2, 2615 + peak_window/2);
+  RooDataHist data2615("data2615", "2615 peak", x, Energy2615);
+
+  RooPlot* frame2615 = x.frame(Title("RooPlot of x"));
+  
+  data2615.plotOn(frame2615);
+  
+  mean.setVal(2615);
+  mean.setRange(2614, 2616);
+  
+  gausslin.fitTo(data2615);
+  gausslin.plotOn(frame2615);
+  gausslin.plotOn(frame2615, Components(p2), LineStyle(kDashed));
+
+  gaussfrac.Print();
+  mean.Print();
+  sigma.Print();
+  a0.Print();
+  a1.Print();
+  
+  Double_t efficiency_2615 = gaussfrac.getVal();
+
+  frame2615->Draw();
+
+  TCanvas * c4 = new TCanvas("c4", "ROOT fit", 1200, 1000);
   c4->cd();
   c4->Divide(3,2);
   c4->cd(1);
-  t1->Draw("Ener1 >> Energy2615", multiplicity);
+  //  t1->Draw("Ener1 >> Energy2615", multiplicity);
   lineargaus->SetParameter(2, 2615);
   lineargaus->SetParameter(3, 5);
   Energy2615->Fit("linear+gaus");
@@ -101,7 +176,7 @@ void plot_AllString_calibrationPeaks() {
     lineargaus->ReleaseParameter(i);
   }
 
-  Double_t efficiency_2615 = Acceptance_lineargaus(offset_2615, linear_2615, amplitude_2615, mean_2615, sigma_2615, peak_window);
+  //Double_t efficiency_2615 = Acceptance_lineargaus(offset_2615, linear_2615, amplitude_2615, mean_2615, sigma_2615, peak_window);
   //cout << efficiency_2615 << endl;
 
   c4->cd(2);
@@ -129,8 +204,41 @@ void plot_AllString_calibrationPeaks() {
     lineardoublegaus->ReleaseParameter(i);
   }
 
-  Double_t efficiency_969 = Acceptance_lineardoublegaus(offset_969, linear_969,  amplitude1_969, mean1_969, sigma1_969, amplitude2_969, mean2_969, sigma2_969, peak_window);
+  //  Double_t efficiency_969 = Acceptance_lineardoublegaus(offset_969, linear_969,  amplitude1_969, mean1_969, sigma1_969, amplitude2_969, mean2_969, sigma2_969, peak_window);
   // cout << efficiency_969;
+
+  c5->cd(2);
+
+  x.setRange(969 - peak_window/2, 969 + peak_window/2);
+  RooDataHist data969("data969", "969 peak", x, Energy969);
+
+  RooPlot* frame969 = x.frame(Title("RooPlot of x"));
+  
+  data969.plotOn(frame969);
+  
+  mean.setVal(969);
+  mean.setRange(967, 972);
+
+  mean2.setVal(965);
+  mean2.setRange(964,967);
+  
+  doublegausslin.fitTo(data969);
+  doublegausslin.plotOn(frame969);
+  doublegausslin.plotOn(frame969, Components(p2), LineStyle(kDashed));
+
+  gaus1frac.Print();
+  doublegausfrac.Print();
+  mean.Print();
+  sigma.Print();
+  mean2.Print();
+  sigma2.Print();
+  a0.Print();
+  a1.Print();
+  
+  Double_t efficiency_969 = doublegausfrac.getVal();
+
+  frame969->Draw();
+
   c4->cd(3);
   t1->Draw("Ener1 >> Energy911", multiplicity);
   lineardoublegaus->SetParameter(2, 911);
@@ -148,14 +256,49 @@ void plot_AllString_calibrationPeaks() {
   Double_t mean2_911 = lineardoublegaus->GetParameter(5) * lineardoublegaus->GetParameter(2);
   Double_t sigma2_911 = lineardoublegaus->GetParameter(6);
 
-  Double_t efficiency_911 = Acceptance_lineardoublegaus(offset_911, linear_911,  amplitude1_911, mean1_911, sigma1_911, amplitude2_911, mean2_911, sigma2_911, peak_window);
+  //  Double_t efficiency_911 = Acceptance_lineardoublegaus(offset_911, linear_911,  amplitude1_911, mean1_911, sigma1_911, amplitude2_911, mean2_911, sigma2_911, peak_window);
 
   for (int i = 0; i < 8; i++) {
     lineardoublegaus->ReleaseParameter(i);
   }
 
+  c5->cd(3);
+
+  x.setRange(911 - peak_window/2, 911 + peak_window/2);
+  RooDataHist data911("data911", "911 peak", x, Energy911);
+
+  RooPlot* frame911 = x.frame(Title("RooPlot of x"));
+  
+  data911.plotOn(frame911);
+  
+  mean.setVal(911);
+  mean.setRange(911-2, 911+2);
+
+  mean2.setVal(905);
+  mean2.setRange(903,910);
+  
+  doublegausslin.fitTo(data911);
+  doublegausslin.plotOn(frame911);
+  doublegausslin.plotOn(frame911, Components(p2), LineStyle(kDashed));
+
+  gaus1frac.Print();
+  doublegausfrac.Print();
+  mean.Print();
+  sigma.Print();
+  mean2.Print();
+  sigma2.Print();
+  a0.Print();
+  a1.Print();
+  
+  Double_t efficiency_911 = doublegausfrac.getVal();
+
+  frame911->Draw();
+  
   c4->cd(4);
-  t1->Draw("Ener1 >> Energy583", multiplicity);
+
+  t1->Draw("Ener1 >> Energy583", multiplicity, "goff");
+
+
   lineargaus->SetParameter(2,583);
   lineargaus->SetParameter(3,5);
   Energy583->Fit("linear+gaus");
@@ -165,14 +308,75 @@ void plot_AllString_calibrationPeaks() {
   Double_t mean_583 = lineargaus->GetParameter(2);
   Double_t sigma_583 = lineargaus->GetParameter(3);
 
-  Double_t efficiency_583 = Acceptance_lineargaus(offset_583, linear_583, amplitude_583, mean_583, sigma_583, peak_window);
+  // Double_t efficiency_583 = Acceptance_lineargaus(offset_583, linear_583, amplitude_583, mean_583, sigma_583, peak_window);
 
   for (int i = 0; i < 5; i++) {
     lineargaus->ReleaseParameter(i);
   }
 
-  c4->cd(5);
+  c5->cd(4);
+  x.setRange(583 - peak_window/2, 583 + peak_window/2);
+  RooDataHist data583("data583", "583 peak", x, Energy583);
+
+  RooPlot* frame583 = x.frame(Title("RooPlot of x"));
+  
+  data583.plotOn(frame583);
+  
+  mean.setVal(583);
+  mean.setRange(583-2, 583+2);
+  
+  gausslin.fitTo(data583);
+  gausslin.plotOn(frame583);
+  gausslin.plotOn(frame583, Components(p2), LineStyle(kDashed));
+
+  gaussfrac.Print();
+  mean.Print();
+  sigma.Print();
+  a0.Print();
+  a1.Print();
+
+  Double_t efficiency_583 = gaussfrac.getVal();
+  
+  frame583->Draw();
+  
+  c5->cd(5);
+
   t1->Draw("Ener1 >> Energy338", multiplicity);
+
+  x.setRange(338 - peak_window_338/2, 338 + peak_window_338/2);
+  RooDataHist data338("data338", "338 peak", x, Energy338);
+
+  RooPlot* frame338 = x.frame(Title("RooPlot of x"));
+  
+  data338.plotOn(frame338);
+  
+  mean.setVal(338);
+  mean.setRange(338-2, 338+2);
+
+  mean2.setVal(329);
+  mean2.setRange(328,330);
+  
+  
+  doublegausslin.fitTo(data338);
+  doublegausslin.plotOn(frame338);
+  doublegausslin.plotOn(frame338, Components(p2), LineStyle(kDashed));
+
+  gaus1frac.Print();
+  doublegausfrac.Print();
+  mean.Print();
+  sigma.Print();
+  mean2.Print();
+  sigma2.Print();
+  a0.Print();
+  a1.Print();
+
+  Double_t efficiency_338 = doublegausfrac.getVal();
+  
+  frame338->Draw();
+  
+
+  c4->cd(5);
+  //t1->Draw("Ener1 >> Energy338", multiplicity);
   lineardoublegaus->SetParameter(2, 338);
   lineardoublegaus->SetParameter(3, 5);
   lineardoublegaus->FixParameter(4, (2.95 /  11.27));
@@ -188,7 +392,7 @@ void plot_AllString_calibrationPeaks() {
   Double_t mean2_338 = lineardoublegaus->GetParameter(5) * lineardoublegaus->GetParameter(2);
   Double_t sigma2_338 = lineardoublegaus->GetParameter(6);
 
-  Double_t efficiency_338 = Acceptance_lineardoublegaus(offset_338, linear_338,  amplitude1_338, mean1_338, sigma1_338, amplitude2_338, mean2_338, sigma2_338, peak_window);
+  //Double_t efficiency_338 = Acceptance_lineardoublegaus(offset_338, linear_338,  amplitude1_338, mean1_338, sigma1_338, amplitude2_338, mean2_338, sigma2_338, peak_window);
 
   for (int i = 0; i < 8; i++) {
     lineardoublegaus->ReleaseParameter(i);
@@ -205,12 +409,44 @@ void plot_AllString_calibrationPeaks() {
   Double_t mean_239 = lineargaus->GetParameter(2);
   Double_t sigma_239 = lineargaus->GetParameter(3);
   
-  Double_t efficiency_239 = Acceptance_lineargaus(offset_239, linear_239, amplitude_239, mean_239, sigma_239, peak_window);
+  //Double_t efficiency_239 = Acceptance_lineargaus(offset_239, linear_239, amplitude_239, mean_239, sigma_239, peak_window);
 
+  c5->cd(6);
+  x.setRange(239 - peak_window/2, 239 + peak_window/2);
+  RooDataHist data239("data239", "239 peak", x, Energy239);
+
+  RooPlot* frame239 = x.frame(Title("RooPlot of x"));
+  
+  data239.plotOn(frame239);
+  
+  mean.setVal(239);
+  mean.setRange(239-2, 239+2);
+  
+  gausslin.fitTo(data239);
+  gausslin.plotOn(frame239);
+  gausslin.plotOn(frame239, Components(p2), LineStyle(kDashed));
+
+  gaussfrac.Print();
+  mean.Print();
+  sigma.Print();
+  a0.Print();
+  a1.Print();
+
+  Double_t efficiency_239 = gaussfrac.getVal();
+  cout << efficiency_239 << endl;
+  cout << efficiency_338 << endl;
+  cout << efficiency_583 << endl;
+  cout << efficiency_911 << endl;
+  cout << efficiency_969 << endl;
+  cout << efficiency_2615 << endl;
+  
+  
+  frame239->Draw();
+  
   for (int i = 0; i < 5; i++) {
     lineargaus->ReleaseParameter(i);
   }
-
+  
   THStack *hs = new THStack("hs", "All Peaks");
   
   TCut cut3 = "Ener1 > 2605";
@@ -492,7 +728,7 @@ void plot_AllString_calibrationPeaks() {
       else {
 	Events_Min = Events_239;
       }
-
+      /*
       cout << "*************" << endl;
       cout << "Events_2615: " << Events_2615 << endl;
       cout << "Events_969: " << Events_969 << endl;
@@ -507,7 +743,7 @@ void plot_AllString_calibrationPeaks() {
       cout << "Events_Four: " << Events_Four << endl;
       cout << "Events_Five: " << Events_Five << endl;
       cout << "Events_Min: " << Events_Min << endl;
-
+      */
       Rate_2615 = Events_2615 * time_scaling * 0.2778;
       Rate_969 = Events_969 * time_scaling * 0.2778;
       Rate_911 = Events_911 * time_scaling * 0.2778;
@@ -519,8 +755,8 @@ void plot_AllString_calibrationPeaks() {
       Rate_Min = Events_Min * time_scaling * 0.2778;
       Rate_Two = Events_Two * time_scaling * 0.2778;
       Rate_Three = Events_Three * time_scaling * 0.2778;
-      Rate_Four = Rate_Four * time_scaling * 0.2778;
-      Rate_Five = Rate_Five * time_scaling * 0.2778;
+      Rate_Four = Events_Four * time_scaling * 0.2778;
+      Rate_Five = Events_Five * time_scaling * 0.2778;
 
       Time_2615 = eventsToCalibrate / (86.0 * Rate_2615);
       Time_969 = eventsToCalibrate / (86.0 * Rate_969);

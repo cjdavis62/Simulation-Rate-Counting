@@ -34,13 +34,14 @@ void plot_calibrationRates() {
   TH1F* Rate338 = new TH1F("Rate338", "338 Peak Rate", 200, 0, 5); // two peaks here
 
   TCanvas* c2 = new TCanvas("c2", "c2", 800, 800);
-
+  t1->Draw("Rate_239 >> Rate239","","goff");
+  t1->Draw("Rate_338 >> Rate338","","goff");
   t1->Draw("Rate_583 >> Rate583","","goff");
   t1->Draw("Rate_2615 >> Rate2615","","goff");
   t1->Draw("Rate_969 >> Rate969","","goff");
   t1->Draw("Rate_911 >> Rate911","","goff");
 
-  c2->Divide(2,2);
+  c2->Divide(3,2);
   c2->cd(1);
   Rate583->Draw();
   Rate583->GetXaxis()->SetRangeUser(0.,2.);
@@ -65,5 +66,16 @@ void plot_calibrationRates() {
   Rate911->GetXaxis()->SetTitle("Rate [mHz]");
   Rate911->GetYaxis()->SetTitle("Channels / 0.025 mHz");
 
-  
+  c2->cd(5);
+  Rate338->Draw();
+  Rate338->GetXaxis()->SetRangeUser(0.,2.);
+  Rate338->GetXaxis()->SetTitle("Rate [mHz]");
+  Rate338->GetYaxis()->SetTitle("Channels / 0.025 mHz");
+ 
+  c2->cd(6);
+  Rate239->Draw();
+  Rate239->GetXaxis()->SetRangeUser(0.,2.);
+  Rate239->GetXaxis()->SetTitle("Rate [mHz]");
+  Rate239->GetYaxis()->SetTitle("Channels / 0.025 mHz");
+
 }
