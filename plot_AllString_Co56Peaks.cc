@@ -1,3 +1,14 @@
+/* This script takes in a g4cuore processed ROOT File and performs fits to the peaks
+These peaks are then analyzed for the ratio of signal/background events
+With the number of signal events, it is then calculated how long it would take to get 50 events per channel per peak
+
+This script in particular is for Co56 spectra in a file called AllString_g4cuore.root
+
+Written by: Christopher Davis
+christopher.davis@yale.edu
+*/
+
+
 #ifndef __CINT__
 #include "RooGlobalFunc.h"
 #endif
@@ -31,28 +42,30 @@ using std::cin;
 using std::endl;
 using namespace RooFit;
 
+// Calculate the ratio of signal events to the total number of events
 Double_t Acceptance_lineargaus(Double_t offset, Double_t linear, Double_t amplitude, Double_t mean, Double_t sigma, Double_t peak_window)
 {
-  // integrate the background
+  // Integrate the Background
+  Double_t background = offset * peak_window + (0.5) * linear * ((peak_window/2.0 + mean)**2 - ((-peak_window/2.0 + mean)**2));
 
-   Double_t background = offset * peak_window + (0.5) * linear * ((peak_window/2.0 + mean)**2 - ((-peak_window/2.0 + mean)**2));
-
-  // integrate the peak
+  // Integrate the Peak
   Double_t signal = 2 * amplitude * (sigma * TMath::Sqrt(TMath::Pi()/2)) * TMath::Erf((peak_window/2.0)/(sigma / TMath::Sqrt(2.0)));
 
   cout << signal << "\t" << background << endl;
-
+  
   return (signal / (background+signal));
 }
 
+// Calculate the raio of signal events to the total number of events
 Double_t Acceptance_lineardoublegaus(Double_t offset, Double_t linear, Double_t amplitude1, Double_t mean1, Double_t sigma1, Double_t amplitude2, Double_t mean2, Double_t sigma2, Double_t peak_window)
 {
-  // integrate the background
+  // Integrate the Background
 
   Double_t background = offset * peak_window + (0.5) * linear * ((peak_window/2.0 + mean1)**2 - ((-peak_window/2.0 + mean1)**2));
 
-  // integrate the main peak
+  // Integrate the main peak
   Double_t signal1 = 2 * amplitude1 * (sigma1 * TMath::Sqrt(TMath::Pi()/2)) * TMath::Erf((peak_window/2.0)/(sigma1 / TMath::Sqrt(2.0)));
+  // Integrate the subpeak
   Double_t signal2 = 0.5 * amplitude2 * ((sigma2 * TMath::Sqrt(TMath::Pi()/2)) * TMath::Erf((peak_window/2.0 - mean2 + mean1)/(sigma2 / TMath::Sqrt(2.0))) - (sigma2 * TMath::Sqrt(TMath::Pi()/2)) * TMath::Erf((-peak_window/2.0 -mean2 +mean1)/(sigma2 / TMath::Sqrt(2.0))));
  
   Double_t signal = signal1 + signal2;
@@ -62,39 +75,50 @@ Double_t Acceptance_lineardoublegaus(Double_t offset, Double_t linear, Double_t 
 
 void plot_AllString_calibrationPeaks() {
 
-  int nbins = 988; //988, 247, 19
+  int nbins = 988;
   int energy_bins = 200;
   double time_scaling = 0.01115; // scale from events to events per hour
 
-  double eventsToCalibrate = 50;
+  double eventsToCalibrate = 50; // How many events to require for a channel to be calibrated
 
   Double_t peak_window = 20; // 20 keV window
   Double_t peak_window_338 = 30; // 30 keV window for 338 double peak
-  int energy_bins_338 = int(double(peak_window_338 / peak_window) * energy_bins);
+  int energy_bins_338 = int(double(peak_window_338 / peak_window) * energy_bins); // 338 keV is a bit special here
   
   TCut multiplicity = "Multiplicity == 1";
 
-  TFile* f1 = new TFile("AllString_g2root.root");
+  TFile* f1 = new TFile("AllString_g4cuore.root");
   TTree* t1 = (TTree*)f1->Get("outTree");
 
-  TH1F* Peak2615 = new TH1F("Peak2615", "Peak2615", nbins, 0, 988);
-  TH1F* Peak969 = new TH1F("Peak969", "Peak969", nbins, 0, 988);
-  TH1F* Peak911 = new TH1F("Peak911", "Peak911", nbins, 0, 988);
-  TH1F* Peak583 = new TH1F("Peak583", "Peak583", nbins, 0, 988);
-  TH1F* Peak338 = new TH1F("Peak338", "Peak338", nbins, 0, 988);
-  TH1F* Peak239 = new TH1F("Peak239", "Peak239", nbins, 0, 988);
+  TH1F* Peak2599 = new TH1F("Peak2599", "Peak2599", nbins, 0, 988);
+  TH1F* Peak847 = new TH1F("Peak847", "Peak847", nbins, 0, 988);
+  TH1F* Peak1238 = new TH1F("Peak1238", "Peak1238", nbins, 0, 988);
+  TH1F* Peak511 = new TH1F("Peak511", "Peak511", nbins, 0, 988);
+  TH1F* Peak1771 = new TH1F("Peak1771", "Peak1771", nbins, 0, 988);
+  TH1F* Peak1037 = new TH1F("Peak1037", "Peak1037", nbins, 0, 988);
+  TH1F* Peak3254 = new TH1F("Peak3254", "Peak3254", nbins, 0, 988);
+  TH1F* Peak2035 = new TH1F("Peak2035", "Peak2035", nbins, 0, 988);
+  TH1F* Peak1360 = new TH1F("Peak1360", "Peak1360", nbins, 0, 988);
+  TH1F* Peak3202 = new TH1F("Peak3202", "Peak3202", nbins, 0, 988);
+  TH1F* Peak3451 = new TH1F("Peak3451", "Peak3451", nbins, 0, 988);
+  
 
-  TH1F* Energy2615 = new TH1F("Energy2615", "Energy2615", energy_bins, (2615 - peak_window/2), (2615 + peak_window/2));
-  TH1F* Energy969 = new TH1F("Energy969", "Energy969", energy_bins, (969 - peak_window/2), (968 + peak_window/2));
-  TH1F* Energy911 = new TH1F("Energy911", "Energy911", energy_bins, (911 - peak_window/2), (911 + peak_window/2));
-  TH1F* Energy583 = new TH1F("Energy583", "Energy583", energy_bins, (583 - peak_window/2), (583 + peak_window/2));
-  TH1F* Energy338 = new TH1F("Energy338", "Energy338", energy_bins_338, (338 - peak_window_338/2), (338 + peak_window_338/2));
-  TH1F* Energy239 = new TH1F("Energy239", "Energy239", energy_bins, (239 - peak_window/2), (239 + peak_window/2));
-
+  TH1F* Energy2599 = new TH1F("Energy2599", "Energy2599", energy_bins, (2599 - peak_window/2), (2599 + peak_window/2));
+  TH1F* Energy847 = new TH1F("Energy847", "Energy847", energy_bins, (847 - peak_window/2), (968 + peak_window/2));
+  TH1F* Energy1238 = new TH1F("Energy1238", "Energy1238", energy_bins, (1238 - peak_window/2), (1238 + peak_window/2));
+  TH1F* Energy511 = new TH1F("Energy511", "Energy511", energy_bins, (511 - peak_window/2), (511 + peak_window/2));
+  TH1F* Energy1771 = new TH1F("Energy1771", "Energy1771", energy_bins, (1771 - peak_window_1771/2), (1771 + peak_window_1771/2));
+  TH1F* Energy1037 = new TH1F("Energy1037", "Energy1037", energy_bins, (1037 - peak_window/2), (1037 + peak_window/2));
+  TH1F* Energy3254 = new TH1F("Energy3254", "Energy3254", energy_bins, (3254 - peak_window/2), (3254 + peak_window/2));
+  TH1F* Energy2035 = new TH1F("Energy2035", "Energy2035", energy_bins, (2035 - peak_window/2), (2035 + peak_window/2));
+  TH1F* Energy1360 = new TH1F("Energy1360", "Energy1360", energy_bins, (1360 - peak_window/2), (1360 + peak_window/2));
+  TH1F* Energy3202 = new TH1F("Energy3202", "Energy3202", energy_bins, (3202 - peak_window/2), (3202 + peak_window/2));
+  TH1F* Energy3451 = new TH1F("Energy3451", "Energy3451", energy_bins, (3451 - peak_window/2), (3451 + peak_window/2));
+    
+  
   // Fit Types
   TF1 * lineargaus = new TF1("linear+gaus", "[0] + [4] * x + [1] * exp(-0.5*((x-[2])/[3])**2)", 0, 5);
   TF2 * lineardoublegaus = new TF1("linear+doublegaus", "[0] + [7] * x + [1] * exp(-0.5*((x-[2])/[3])**2) + [4]*[1] * exp(-0.5*((x-[5]*[2])/[6])**2)", 0, 5);
-
 
   // begin RooFits
 
@@ -128,25 +152,24 @@ void plot_AllString_calibrationPeaks() {
   RooRealVar doublegausfrac("doublegausfrac", "fraction of gaussians", 0.8, 0, 1);
   RooAddPdf doublegausslin("doublegausslin", "doublegaus+p2", RooArgList(doublegaus, p2), RooArgList(doublegausfrac));
 
+  TCanvas * c1 = new TCanvas("c1", "Roofit", 1200, 1000);
+  c1->cd();
+  c1->Divide(4,3);
+  c1->cd(1);
+  t1->Draw("Ener1 >> Energy2599", multiplicity, "goff");
+  x.setRange(2599 - peak_window/2, 2599 + peak_window/2);
+  RooDataHist data2599("data2599", "2599 peak", x, Energy2599);
 
-  TCanvas * c5 = new TCanvas("c5", "Roofit", 1200, 1000);
-  c5->cd();
-  c5->Divide(3,2);
-  c5->cd(1);
-  t1->Draw("Ener1 >> Energy2615", multiplicity, "goff");
-  x.setRange(2615 - peak_window/2, 2615 + peak_window/2);
-  RooDataHist data2615("data2615", "2615 peak", x, Energy2615);
-
-  RooPlot* frame2615 = x.frame(Title("RooPlot of x"));
+  RooPlot* frame2599 = x.frame(Title("RooPlot of x"));
   
-  data2615.plotOn(frame2615);
+  data2599.plotOn(frame2599);
   
-  mean.setVal(2615);
-  mean.setRange(2614, 2616);
+  mean.setVal(2599);
+  mean.setRange(2599-1, 2599+1);
   
-  gausslin.fitTo(data2615);
-  gausslin.plotOn(frame2615);
-  gausslin.plotOn(frame2615, Components(p2), LineStyle(kDashed));
+  gausslin.fitTo(data2599);
+  gausslin.plotOn(frame2599);
+  gausslin.plotOn(frame2599, Components(p2), LineStyle(kDashed));
 
   gaussfrac.Print();
   mean.Print();
@@ -154,13 +177,13 @@ void plot_AllString_calibrationPeaks() {
   a0.Print();
   a1.Print();
   
-  Double_t efficiency_2615 = gaussfrac.getVal();
+  Double_t efficiency_2599 = gaussfrac.getVal();
 
-  frame2615->Draw();
+  frame2599->Draw();
 
-  TCanvas * c4 = new TCanvas("c4", "ROOT fit", 1200, 1000);
+  TCanvas * c2 = new TCanvas("c2", "ROOT fit", 1200, 1000);
   c4->cd();
-  c4->Divide(3,2);
+  c4->Divide(4,3);
   c4->cd(1);
   //  t1->Draw("Ener1 >> Energy2615", multiplicity);
   lineargaus->SetParameter(2, 2615);
