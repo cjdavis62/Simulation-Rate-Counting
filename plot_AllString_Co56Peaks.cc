@@ -59,12 +59,13 @@ Double_t Acceptance_lineargaus(Double_t offset, Double_t linear, Double_t amplit
 // Calculate the raio of signal events to the total number of events
 Double_t Acceptance_lineardoublegaus(Double_t offset, Double_t linear, Double_t amplitude1, Double_t mean1, Double_t sigma1, Double_t amplitude2, Double_t mean2, Double_t sigma2, Double_t peak_window)
 {
-  // Integrate the Background
 
+  // Integrate the Background
   Double_t background = offset * peak_window + (0.5) * linear * ((peak_window/2.0 + mean1)**2 - ((-peak_window/2.0 + mean1)**2));
 
   // Integrate the main peak
   Double_t signal1 = 2 * amplitude1 * (sigma1 * TMath::Sqrt(TMath::Pi()/2)) * TMath::Erf((peak_window/2.0)/(sigma1 / TMath::Sqrt(2.0)));
+
   // Integrate the subpeak
   Double_t signal2 = 0.5 * amplitude2 * ((sigma2 * TMath::Sqrt(TMath::Pi()/2)) * TMath::Erf((peak_window/2.0 - mean2 + mean1)/(sigma2 / TMath::Sqrt(2.0))) - (sigma2 * TMath::Sqrt(TMath::Pi()/2)) * TMath::Erf((-peak_window/2.0 -mean2 +mean1)/(sigma2 / TMath::Sqrt(2.0))));
  
@@ -73,7 +74,7 @@ Double_t Acceptance_lineardoublegaus(Double_t offset, Double_t linear, Double_t 
   return (signal / (background+signal));
 }
 
-void plot_AllString_calibrationPeaks() {
+void plot_AllString_Co56Peaks() {
 
   int nbins = 988;
   int energy_bins = 200;
@@ -82,14 +83,18 @@ void plot_AllString_calibrationPeaks() {
   double eventsToCalibrate = 50; // How many events to require for a channel to be calibrated
 
   Double_t peak_window = 20; // 20 keV window
-  Double_t peak_window_338 = 30; // 30 keV window for 338 double peak
-  int energy_bins_338 = int(double(peak_window_338 / peak_window) * energy_bins); // 338 keV is a bit special here
-  
+  Double_t peak_window_2035_left = 35; // Give more space to the left to include the subpeak
+  Double_t peak_window_2035_right = peak_window/2; // Give the normal space to the right
+
+  // looking at the M1 Spectrum
   TCut multiplicity = "Multiplicity == 1";
 
+  // open the file and the tree
   TFile* f1 = new TFile("AllString_g4cuore.root");
   TTree* t1 = (TTree*)f1->Get("outTree");
 
+
+  // Per channel histograms for each peak
   TH1F* Peak2599 = new TH1F("Peak2599", "Peak2599", nbins, 0, 988);
   TH1F* Peak847 = new TH1F("Peak847", "Peak847", nbins, 0, 988);
   TH1F* Peak1238 = new TH1F("Peak1238", "Peak1238", nbins, 0, 988);
@@ -102,15 +107,15 @@ void plot_AllString_calibrationPeaks() {
   TH1F* Peak3202 = new TH1F("Peak3202", "Peak3202", nbins, 0, 988);
   TH1F* Peak3451 = new TH1F("Peak3451", "Peak3451", nbins, 0, 988);
   
-
+  // Energy histograms around each peak
   TH1F* Energy2599 = new TH1F("Energy2599", "Energy2599", energy_bins, (2599 - peak_window/2), (2599 + peak_window/2));
-  TH1F* Energy847 = new TH1F("Energy847", "Energy847", energy_bins, (847 - peak_window/2), (968 + peak_window/2));
+  TH1F* Energy847 = new TH1F("Energy847", "Energy847", energy_bins, (847 - peak_window/2), (847 + peak_window/2));
   TH1F* Energy1238 = new TH1F("Energy1238", "Energy1238", energy_bins, (1238 - peak_window/2), (1238 + peak_window/2));
   TH1F* Energy511 = new TH1F("Energy511", "Energy511", energy_bins, (511 - peak_window/2), (511 + peak_window/2));
-  TH1F* Energy1771 = new TH1F("Energy1771", "Energy1771", energy_bins, (1771 - peak_window_1771/2), (1771 + peak_window_1771/2));
+  TH1F* Energy1771 = new TH1F("Energy1771", "Energy1771", energy_bins, (1771 - peak_window/2), (1771 + peak_window/2));
   TH1F* Energy1037 = new TH1F("Energy1037", "Energy1037", energy_bins, (1037 - peak_window/2), (1037 + peak_window/2));
   TH1F* Energy3254 = new TH1F("Energy3254", "Energy3254", energy_bins, (3254 - peak_window/2), (3254 + peak_window/2));
-  TH1F* Energy2035 = new TH1F("Energy2035", "Energy2035", energy_bins, (2035 - peak_window/2), (2035 + peak_window/2));
+  TH1F* Energy2035 = new TH1F("Energy2035", "Energy2035", energy_bins, (2035 - peak_window_2035_left), (2035 + peak_window_2035_right));
   TH1F* Energy1360 = new TH1F("Energy1360", "Energy1360", energy_bins, (1360 - peak_window/2), (1360 + peak_window/2));
   TH1F* Energy3202 = new TH1F("Energy3202", "Energy3202", energy_bins, (3202 - peak_window/2), (3202 + peak_window/2));
   TH1F* Energy3451 = new TH1F("Energy3451", "Energy3451", energy_bins, (3451 - peak_window/2), (3451 + peak_window/2));
@@ -152,11 +157,16 @@ void plot_AllString_calibrationPeaks() {
   RooRealVar doublegausfrac("doublegausfrac", "fraction of gaussians", 0.8, 0, 1);
   RooAddPdf doublegausslin("doublegausslin", "doublegaus+p2", RooArgList(doublegaus, p2), RooArgList(doublegausfrac));
 
+  // Create a canvas for Roofit plots and fits
   TCanvas * c1 = new TCanvas("c1", "Roofit", 1200, 1000);
   c1->cd();
+  // Make the canvas into 12 plot spaces (will use 11)
   c1->Divide(4,3);
   c1->cd(1);
+  // Fill the histograms with the data
   t1->Draw("Ener1 >> Energy2599", multiplicity, "goff");
+
+  // Set the x range
   x.setRange(2599 - peak_window/2, 2599 + peak_window/2);
   RooDataHist data2599("data2599", "2599 peak", x, Energy2599);
 
@@ -164,90 +174,361 @@ void plot_AllString_calibrationPeaks() {
   
   data2599.plotOn(frame2599);
   
+  // Help the fit find the mean because these things are dumb
   mean.setVal(2599);
   mean.setRange(2599-1, 2599+1);
   
+  // Do the fit
   gausslin.fitTo(data2599);
   gausslin.plotOn(frame2599);
   gausslin.plotOn(frame2599, Components(p2), LineStyle(kDashed));
 
+
+  // Print the params
   gaussfrac.Print();
   mean.Print();
   sigma.Print();
   a0.Print();
   a1.Print();
   
+  // Save the efficiency
   Double_t efficiency_2599 = gaussfrac.getVal();
 
+  // Draw the histogram
   frame2599->Draw();
 
+  // Make another histogram with 'standard' root fitting. This is to help cross-check fits
   TCanvas * c2 = new TCanvas("c2", "ROOT fit", 1200, 1000);
-  c4->cd();
-  c4->Divide(4,3);
-  c4->cd(1);
-  //  t1->Draw("Ener1 >> Energy2615", multiplicity);
-  lineargaus->SetParameter(2, 2615);
+  c2->Divide(4,3);
+  c2->cd(1);
+  // Draw the histogram
+  Energy2599->Draw();
+  // help the fits because fits algorithms are dumb
+  lineargaus->SetParameter(2, 2599);
   lineargaus->SetParameter(3, 5);
-  Energy2615->Fit("linear+gaus");
-  Double_t offset_2615 = lineargaus->GetParameter(0);
-  Double_t linear_2615 = lineargaus->GetParameter(4);
-  Double_t amplitude_2615 = lineargaus->GetParameter(1);
-  Double_t mean_2615 = lineargaus->GetParameter(2);
-  Double_t sigma_2615 = lineargaus->GetParameter(3);
+  Energy2599->Fit("linear+gaus");
+
+  // Save the parameters
+  Double_t offset_2599 = lineargaus->GetParameter(0);
+  Double_t linear_2599 = lineargaus->GetParameter(4);
+  Double_t amplitude_2599 = lineargaus->GetParameter(1);
+  Double_t mean_2599 = lineargaus->GetParameter(2);
+  Double_t sigma_2599 = lineargaus->GetParameter(3);
+
+  // Need to release parameters (so next fit can start with a tabula rasa)
+  for (int i = 0; i < 5; i++) {
+    lineargaus->ReleaseParameter(i);
+  }
+
+  // Move to the next part of the canvas
+  c2->cd(2);
+  t1->Draw("Ener1 >> Energy847", multiplicity, "goff");
+  Energy847->Draw();
+  lineargaus->SetParameter(2, 847);
+  lineargaus->SetParameter(3, 5);
+  Energy847->Fit("linear+gaus");
+  Double_t offset_847 = lineargaus->GetParameter(0);
+  Double_t linear_847 = lineargaus->GetParameter(4);
+  Double_t amplitude_847 = lineargaus->GetParameter(1);
+  Double_t mean_847 = lineargaus->GetParameter(2);
+  Double_t sigma_847 = lineargaus->GetParameter(3);
 
   for (int i = 0; i < 5; i++) {
     lineargaus->ReleaseParameter(i);
   }
 
-  //Double_t efficiency_2615 = Acceptance_lineargaus(offset_2615, linear_2615, amplitude_2615, mean_2615, sigma_2615, peak_window);
-  //cout << efficiency_2615 << endl;
+  c1->cd(2);
 
-  c4->cd(2);
-  t1->Draw("Ener1 >> Energy969", multiplicity);
-  lineardoublegaus->SetParameter(0, 9876.4);
-  lineardoublegaus->SetParameter(1, 6471.7);
-  lineardoublegaus->SetParameter(2, 969);
+  x.setRange(847 - peak_window/2, 847 + peak_window/2);
+  RooDataHist data847("data847", "847 peak", x, Energy847);
+
+  RooPlot* frame847 = x.frame(Title("RooPlot of x"));
+  
+  data847.plotOn(frame847);
+  
+  mean.setVal(847);
+  mean.setRange(847-3, 847+3);
+
+  gausslin.fitTo(data847);
+  gausslin.plotOn(frame847);
+  gausslin.plotOn(frame847, Components(p2), LineStyle(kDashed));
+
+  gaussfrac.Print();
+  mean.Print();
+  sigma.Print();
+  a0.Print();
+  a1.Print();
+  
+  Double_t efficiency_847 = gaussfrac.getVal();
+
+  frame847->Draw();
+
+  c2->cd(3);
+  t1->Draw("Ener1 >> Energy1238", multiplicity);
+  lineargaus->SetParameter(2, 1238);
+  lineargaus->SetParameter(3, 5);
+  Energy1238->Fit("linear+gaus");
+  Double_t offset_1238 = lineargaus->GetParameter(0);
+  Double_t linear_1238 = lineargaus->GetParameter(4);
+  Double_t amplitude_1238 = lineargaus->GetParameter(1);
+  Double_t mean_1238 = lineargaus->GetParameter(2);
+  Double_t sigma_1238 = lineargaus->GetParameter(3);
+
+  for (int i = 0; i < 5; i++) {
+    lineardoublegaus->ReleaseParameter(i);
+  }
+
+  c1->cd(3);
+
+  x.setRange(1238 - peak_window/2, 1238 + peak_window/2);
+  RooDataHist data1238("data1238", "1238 peak", x, Energy1238);
+
+  RooPlot* frame1238 = x.frame(Title("RooPlot of x"));
+  
+  data1238.plotOn(frame1238);
+  
+  mean.setVal(1238);
+  mean.setRange(1238-2, 1238+2);
+
+  gausslin.fitTo(data1238);
+  gausslin.plotOn(frame1238);
+  gausslin.plotOn(frame1238, Components(p2), LineStyle(kDashed));
+
+  gaussfrac.Print();
+  mean.Print();
+  sigma.Print();
+  a0.Print();
+  a1.Print();
+  
+  Double_t efficiency_1238 = gaussfrac.getVal();
+
+  frame1238->Draw();
+  
+  c2->cd(4);
+
+  t1->Draw("Ener1 >> Energy511", multiplicity, "goff");
+
+
+  lineargaus->SetParameter(2,511);
+  lineargaus->SetParameter(3,5);
+  Energy511->Fit("linear+gaus");
+  Double_t offset_511 = lineargaus->GetParameter(0);
+  Double_t linear_511 = lineargaus->GetParameter(4);
+  Double_t amplitude_511 = lineargaus->GetParameter(1);
+  Double_t mean_511 = lineargaus->GetParameter(2);
+  Double_t sigma_511 = lineargaus->GetParameter(3);
+
+  for (int i = 0; i < 5; i++) {
+    lineargaus->ReleaseParameter(i);
+  }
+
+  c1->cd(4);
+  x.setRange(511 - peak_window/2, 511 + peak_window/2);
+  RooDataHist data511("data511", "511 peak", x, Energy511);
+
+  RooPlot* frame511 = x.frame(Title("RooPlot of x"));
+  
+  data511.plotOn(frame511);
+  
+  mean.setVal(511);
+  mean.setRange(511-2, 511+2);
+  
+  gausslin.fitTo(data511);
+  gausslin.plotOn(frame511);
+  gausslin.plotOn(frame511, Components(p2), LineStyle(kDashed));
+
+  gaussfrac.Print();
+  mean.Print();
+  sigma.Print();
+  a0.Print();
+  a1.Print();
+
+  Double_t efficiency_511 = gaussfrac.getVal();
+  
+  frame511->Draw();
+  
+  c1->cd(5);
+
+  t1->Draw("Ener1 >> Energy1771", multiplicity);
+
+  x.setRange(1771 - peak_window/2, 1771 + peak_window/2);
+  RooDataHist data1771("data1771", "1771 peak", x, Energy1771);
+
+  RooPlot* frame1771 = x.frame(Title("RooPlot of x"));
+  
+  data1771.plotOn(frame1771);
+  
+  mean.setVal(1771);
+  mean.setRange(1771-2, 1771+2);
+
+  gausslin.fitTo(data1771);
+  gausslin.plotOn(frame1771);
+  gausslin.plotOn(frame1771, Components(p2), LineStyle(kDashed));
+
+  gaussfrac.Print();
+  mean.Print();
+  sigma.Print();
+  a0.Print();
+  a1.Print();
+
+  Double_t efficiency_1771 = doublegausfrac.getVal();
+  
+  frame1771->Draw();
+
+  c2->cd(5);
+  lineargaus->SetParameter(2, 1771);
+  lineargaus->SetParameter(3, 5);
+  Energy1771->Fit("linear+gaus");
+  Double_t offset_1771 = lineargaus->GetParameter(0);
+  Double_t linear_1771 = lineargaus->GetParameter(4);
+  Double_t amplitude_1771 = lineargaus->GetParameter(1);
+  Double_t mean_1771 = lineargaus->GetParameter(2);
+  Double_t sigma_1771 = lineargaus->GetParameter(3);
+  
+  for (int i = 0; i < 5; i++) {
+    lineargaus->ReleaseParameter(i);
+  }
+
+  c2->cd(6);
+  t1->Draw("Ener1 >> Energy1037", multiplicity);
+  lineargaus->SetParameter(2,1037);
+  lineargaus->SetParameter(3,5);
+  Energy1037->Fit("linear+gaus");
+  Double_t offset_1037 = lineargaus->GetParameter(0);
+  Double_t linear_1037 = lineargaus->GetParameter(4);
+  Double_t amplitude_1037 = lineargaus->GetParameter(1);
+  Double_t mean_1037 = lineargaus->GetParameter(2);
+  Double_t sigma_1037 = lineargaus->GetParameter(3);
+  
+  c1->cd(6);
+  x.setRange(1037 - peak_window/2, 1037 + peak_window/2);
+  RooDataHist data1037("data1037", "1037 peak", x, Energy1037);
+
+  RooPlot* frame1037 = x.frame(Title("RooPlot of x"));
+  
+  data1037.plotOn(frame1037);
+  
+  mean.setVal(1037);
+  mean.setRange(1037-2, 1037+2);
+  
+  gausslin.fitTo(data1037);
+  gausslin.plotOn(frame1037);
+  gausslin.plotOn(frame1037, Components(p2), LineStyle(kDashed));
+
+  gaussfrac.Print();
+  mean.Print();
+  sigma.Print();
+  a0.Print();
+  a1.Print();
+
+  Double_t efficiency_1037 = gaussfrac.getVal();
+    
+  frame1037->Draw();
+  
+  for (int i = 0; i < 5; i++) {
+    lineargaus->ReleaseParameter(i);
+  }
+
+  c2->cd(7);
+  t1->Draw("Ener1 >> Energy3254", multiplicity);
+  //  lineardoublegaus->SetParameter(0, 9876.4);
+  //  lineardoublegaus->SetParameter(1, 6471.7);
+  lineardoublegaus->SetParameter(2, 3254);
   lineardoublegaus->SetParameter(3, 2.1);
-  lineardoublegaus->FixParameter(4, (4.99 / 15.8));
-  lineardoublegaus->FixParameter(5, 964.766 / 968.971);
+  lineardoublegaus->FixParameter(4, (1.876 / 7.923));
+  lineardoublegaus->FixParameter(5, 3273.079 / 3253.503);
   lineardoublegaus->SetParameter(6, 1);
-  lineardoublegaus->SetParameter(7, -9.8625);
-  Energy969->Fit("linear+doublegaus");
-  Double_t offset_969 = lineardoublegaus->GetParameter(0);
-  Double_t linear_969 = lineardoublegaus->GetParameter(7);
-  Double_t amplitude1_969 = lineardoublegaus->GetParameter(1);
-  Double_t mean1_969 = lineardoublegaus->GetParameter(2);
-  Double_t sigma1_969 = lineardoublegaus->GetParameter(3);
-  Double_t amplitude2_969 = lineardoublegaus->GetParameter(1) * lineardoublegaus->GetParameter(4);
-  Double_t mean2_969 = lineardoublegaus->GetParameter(5) * lineardoublegaus->GetParameter(2);
-  Double_t sigma2_969 = lineardoublegaus->GetParameter(6);
+  //  lineardoublegaus->SetParameter(7, -9.8625);
+  Energy3254->Fit("linear+doublegaus");
+  Double_t offset_3254 = lineardoublegaus->GetParameter(0);
+  Double_t linear_3254 = lineardoublegaus->GetParameter(7);
+  Double_t amplitude1_3254 = lineardoublegaus->GetParameter(1);
+  Double_t mean1_3254 = lineardoublegaus->GetParameter(2);
+  Double_t sigma1_3254 = lineardoublegaus->GetParameter(3);
+  Double_t amplitude2_3254 = lineardoublegaus->GetParameter(1) * lineardoublegaus->GetParameter(4);
+  Double_t mean2_3254 = lineardoublegaus->GetParameter(5) * lineardoublegaus->GetParameter(2);
+  Double_t sigma2_3254 = lineardoublegaus->GetParameter(6);
 
 
   for (int i = 0; i < 8; i++) {
     lineardoublegaus->ReleaseParameter(i);
   }
 
-  //  Double_t efficiency_969 = Acceptance_lineardoublegaus(offset_969, linear_969,  amplitude1_969, mean1_969, sigma1_969, amplitude2_969, mean2_969, sigma2_969, peak_window);
-  // cout << efficiency_969;
+  c1->cd(7);
 
-  c5->cd(2);
+  x.setRange(3254 - peak_window/2, 3254 + peak_window/2);
+  RooDataHist data3254("data3254", "3254 peak", x, Energy3254);
 
-  x.setRange(969 - peak_window/2, 969 + peak_window/2);
-  RooDataHist data969("data969", "969 peak", x, Energy969);
-
-  RooPlot* frame969 = x.frame(Title("RooPlot of x"));
+  RooPlot* frame3254 = x.frame(Title("RooPlot of x"));
   
-  data969.plotOn(frame969);
+  data3254.plotOn(frame3254);
   
-  mean.setVal(969);
+  mean.setVal(3254);
+  mean.setRange(3254-2, 3254+2);
+
+  mean2.setVal(3273);
+  mean2.setRange(3273-2,3273+2);
+  
+  doublegausslin.fitTo(data3254);
+  doublegausslin.plotOn(frame3254);
+  doublegausslin.plotOn(frame3254, Components(p2), LineStyle(kDashed));
+
+  gaus1frac.Print();
+  doublegausfrac.Print();
+  mean.Print();
+  sigma.Print();
+  mean2.Print();
+  sigma2.Print();
+  a0.Print();
+  a1.Print();
+
+  Double_t efficiency_3254 = doublegausfrac.getVal();
+
+  frame3254->Draw();
+
+  c2->cd(8);
+  t1->Draw("Ener1 >> Energy2035", multiplicity);
+  //lineardoublegaus->SetParameter(0, 9876.4);
+  //lineardoublegaus->SetParameter(1, 6471.7);
+  lineardoublegaus->SetParameter(2, 2035);
+  lineardoublegaus->SetParameter(3, 2.1);
+  lineardoublegaus->FixParameter(4, (3.016 / 7.77));
+  lineardoublegaus->FixParameter(5, 2015.215 / 2034.791);
+  lineardoublegaus->SetParameter(6, 1);
+  //lineardoublegaus->SetParameter(7, -9.8625);
+  Energy2035->Fit("linear+doublegaus");
+  Double_t offset_2035 = lineardoublegaus->GetParameter(0);
+  Double_t linear_2035 = lineardoublegaus->GetParameter(7);
+  Double_t amplitude1_2035 = lineardoublegaus->GetParameter(1);
+  Double_t mean1_2035 = lineardoublegaus->GetParameter(2);
+  Double_t sigma1_2035 = lineardoublegaus->GetParameter(3);
+  Double_t amplitude2_2035 = lineardoublegaus->GetParameter(1) * lineardoublegaus->GetParameter(4);
+  Double_t mean2_2035 = lineardoublegaus->GetParameter(5) * lineardoublegaus->GetParameter(2);
+  Double_t sigma2_2035 = lineardoublegaus->GetParameter(6);
+
+
+  for (int i = 0; i < 8; i++) {
+    lineardoublegaus->ReleaseParameter(i);
+  }
+
+  c1->cd(8);
+
+  x.setRange(2035 - peak_window_2035_left, 2035 + peak_window_2035_right);
+  RooDataHist data2035("data2035", "2035 peak", x, Energy2035);
+
+  RooPlot* frame2035 = x.frame(Title("RooPlot of x"));
+  
+  data2035.plotOn(frame2035);
+  
+  mean.setVal(2035);
   mean.setRange(967, 972);
 
-  mean2.setVal(965);
-  mean2.setRange(964,967);
+  mean2.setVal(2015);
+  mean2.setRange(2015-2,2015+2);
   
-  doublegausslin.fitTo(data969);
-  doublegausslin.plotOn(frame969);
-  doublegausslin.plotOn(frame969, Components(p2), LineStyle(kDashed));
+  doublegausslin.fitTo(data2035);
+  doublegausslin.plotOn(frame2035);
+  doublegausslin.plotOn(frame2035, Components(p2), LineStyle(kDashed));
 
   gaus1frac.Print();
   doublegausfrac.Print();
@@ -257,100 +538,36 @@ void plot_AllString_calibrationPeaks() {
   sigma2.Print();
   a0.Print();
   a1.Print();
-  
-  Double_t efficiency_969 = doublegausfrac.getVal();
 
-  frame969->Draw();
+  Double_t efficiency_2035 = doublegausfrac.getVal();
 
-  c4->cd(3);
-  t1->Draw("Ener1 >> Energy911", multiplicity);
-  lineardoublegaus->SetParameter(2, 911);
-  lineardoublegaus->SetParameter(3, 5);
-  lineardoublegaus->FixParameter(4, (0.77 / 25.8));
-  lineardoublegaus->FixParameter(5, (904.2 / 911.204));
-  lineardoublegaus->SetParameter(6, 1);
-  Energy911->Fit("linear+doublegaus");
-  Double_t offset_911 = lineardoublegaus->GetParameter(0);
-  Double_t linear_911 = lineardoublegaus->GetParameter(7);
-  Double_t amplitude1_911 = lineardoublegaus->GetParameter(1);
-  Double_t mean1_911 = lineardoublegaus->GetParameter(2);
-  Double_t sigma1_911 = lineardoublegaus->GetParameter(3);
-  Double_t amplitude2_911 = lineardoublegaus->GetParameter(1) * lineardoublegaus->GetParameter(4);
-  Double_t mean2_911 = lineardoublegaus->GetParameter(5) * lineardoublegaus->GetParameter(2);
-  Double_t sigma2_911 = lineardoublegaus->GetParameter(6);
+  frame2035->Draw();
 
-  //  Double_t efficiency_911 = Acceptance_lineardoublegaus(offset_911, linear_911,  amplitude1_911, mean1_911, sigma1_911, amplitude2_911, mean2_911, sigma2_911, peak_window);
-
-  for (int i = 0; i < 8; i++) {
-    lineardoublegaus->ReleaseParameter(i);
-  }
-
-  c5->cd(3);
-
-  x.setRange(911 - peak_window/2, 911 + peak_window/2);
-  RooDataHist data911("data911", "911 peak", x, Energy911);
-
-  RooPlot* frame911 = x.frame(Title("RooPlot of x"));
-  
-  data911.plotOn(frame911);
-  
-  mean.setVal(911);
-  mean.setRange(911-2, 911+2);
-
-  mean2.setVal(905);
-  mean2.setRange(903,910);
-  
-  doublegausslin.fitTo(data911);
-  doublegausslin.plotOn(frame911);
-  doublegausslin.plotOn(frame911, Components(p2), LineStyle(kDashed));
-
-  gaus1frac.Print();
-  doublegausfrac.Print();
-  mean.Print();
-  sigma.Print();
-  mean2.Print();
-  sigma2.Print();
-  a0.Print();
-  a1.Print();
-  
-  Double_t efficiency_911 = doublegausfrac.getVal();
-
-  frame911->Draw();
-  
-  c4->cd(4);
-
-  t1->Draw("Ener1 >> Energy583", multiplicity, "goff");
-
-
-  lineargaus->SetParameter(2,583);
+  c2->cd(9);
+  t1->Draw("Ener1 >> Energy1360", multiplicity);
+  lineargaus->SetParameter(2,1360);
   lineargaus->SetParameter(3,5);
-  Energy583->Fit("linear+gaus");
-  Double_t offset_583 = lineargaus->GetParameter(0);
-  Double_t linear_583 = lineargaus->GetParameter(4);
-  Double_t amplitude_583 = lineargaus->GetParameter(1);
-  Double_t mean_583 = lineargaus->GetParameter(2);
-  Double_t sigma_583 = lineargaus->GetParameter(3);
-
-  // Double_t efficiency_583 = Acceptance_lineargaus(offset_583, linear_583, amplitude_583, mean_583, sigma_583, peak_window);
-
-  for (int i = 0; i < 5; i++) {
-    lineargaus->ReleaseParameter(i);
-  }
-
-  c5->cd(4);
-  x.setRange(583 - peak_window/2, 583 + peak_window/2);
-  RooDataHist data583("data583", "583 peak", x, Energy583);
-
-  RooPlot* frame583 = x.frame(Title("RooPlot of x"));
+  Energy1360->Fit("linear+gaus");
+  Double_t offset_1360 = lineargaus->GetParameter(0);
+  Double_t linear_1360 = lineargaus->GetParameter(4);
+  Double_t amplitude_1360 = lineargaus->GetParameter(1);
+  Double_t mean_1360 = lineargaus->GetParameter(2);
+  Double_t sigma_1360 = lineargaus->GetParameter(3);
   
-  data583.plotOn(frame583);
+  c1->cd(9);
+  x.setRange(1360 - peak_window/2, 1360 + peak_window/2);
+  RooDataHist data1360("data1360", "1360 peak", x, Energy1360);
+
+  RooPlot* frame1360 = x.frame(Title("RooPlot of x"));
   
-  mean.setVal(583);
-  mean.setRange(583-2, 583+2);
+  data1360.plotOn(frame1360);
   
-  gausslin.fitTo(data583);
-  gausslin.plotOn(frame583);
-  gausslin.plotOn(frame583, Components(p2), LineStyle(kDashed));
+  mean.setVal(1360);
+  mean.setRange(1360-2, 1360+2);
+  
+  gausslin.fitTo(data1360);
+  gausslin.plotOn(frame1360);
+  gausslin.plotOn(frame1360, Components(p2), LineStyle(kDashed));
 
   gaussfrac.Print();
   mean.Print();
@@ -358,96 +575,39 @@ void plot_AllString_calibrationPeaks() {
   a0.Print();
   a1.Print();
 
-  Double_t efficiency_583 = gaussfrac.getVal();
+  Double_t efficiency_1360 = gaussfrac.getVal();
   
-  frame583->Draw();
-  
-  c5->cd(5);
+  frame1360->Draw();
 
-  t1->Draw("Ener1 >> Energy338", multiplicity);
-
-  x.setRange(338 - peak_window_338/2, 338 + peak_window_338/2);
-  RooDataHist data338("data338", "338 peak", x, Energy338);
-
-  RooPlot* frame338 = x.frame(Title("RooPlot of x"));
-  
-  data338.plotOn(frame338);
-  
-  mean.setVal(338);
-  mean.setRange(338-2, 338+2);
-
-  mean2.setVal(329);
-  mean2.setRange(328,330);
-  
-  
-  doublegausslin.fitTo(data338);
-  doublegausslin.plotOn(frame338);
-  doublegausslin.plotOn(frame338, Components(p2), LineStyle(kDashed));
-
-  gaus1frac.Print();
-  doublegausfrac.Print();
-  mean.Print();
-  sigma.Print();
-  mean2.Print();
-  sigma2.Print();
-  a0.Print();
-  a1.Print();
-
-  Double_t efficiency_338 = doublegausfrac.getVal();
-  
-  frame338->Draw();
-  
-
-  c4->cd(5);
-  //t1->Draw("Ener1 >> Energy338", multiplicity);
-  lineardoublegaus->SetParameter(2, 338);
-  lineardoublegaus->SetParameter(3, 5);
-  lineardoublegaus->FixParameter(4, (2.95 /  11.27));
-  lineardoublegaus->FixParameter(5, (328.0/338.320));
-  lineardoublegaus->SetParameter(6, 1);
-  Energy338->Fit("linear+doublegaus");
-  Double_t offset_338 = lineardoublegaus->GetParameter(0);
-  Double_t linear_338 = lineardoublegaus->GetParameter(7);
-  Double_t amplitude1_338 = lineardoublegaus->GetParameter(1);
-  Double_t mean1_338 = lineardoublegaus->GetParameter(2);
-  Double_t sigma1_338 = lineardoublegaus->GetParameter(3);
-  Double_t amplitude2_338 = lineardoublegaus->GetParameter(1) * lineardoublegaus->GetParameter(4);
-  Double_t mean2_338 = lineardoublegaus->GetParameter(5) * lineardoublegaus->GetParameter(2);
-  Double_t sigma2_338 = lineardoublegaus->GetParameter(6);
-
-  //Double_t efficiency_338 = Acceptance_lineardoublegaus(offset_338, linear_338,  amplitude1_338, mean1_338, sigma1_338, amplitude2_338, mean2_338, sigma2_338, peak_window);
-
-  for (int i = 0; i < 8; i++) {
-    lineardoublegaus->ReleaseParameter(i);
+  for (int i = 0; i < 5; i++) {
+    lineargaus->ReleaseParameter(i);
   }
-
-  c4->cd(6);
-  t1->Draw("Ener1 >> Energy239", multiplicity);
-  lineargaus->SetParameter(2,239);
+  
+  c2->cd(10);
+  t1->Draw("Ener1 >> Energy3202", multiplicity);
+  lineargaus->SetParameter(2,3202);
   lineargaus->SetParameter(3,5);
-  Energy239->Fit("linear+gaus");
-  Double_t offset_239 = lineargaus->GetParameter(0);
-  Double_t linear_239 = lineargaus->GetParameter(4);
-  Double_t amplitude_239 = lineargaus->GetParameter(1);
-  Double_t mean_239 = lineargaus->GetParameter(2);
-  Double_t sigma_239 = lineargaus->GetParameter(3);
+  Energy3202->Fit("linear+gaus");
+  Double_t offset_3202 = lineargaus->GetParameter(0);
+  Double_t linear_3202 = lineargaus->GetParameter(4);
+  Double_t amplitude_3202 = lineargaus->GetParameter(1);
+  Double_t mean_3202 = lineargaus->GetParameter(2);
+  Double_t sigma_3202 = lineargaus->GetParameter(3);
   
-  //Double_t efficiency_239 = Acceptance_lineargaus(offset_239, linear_239, amplitude_239, mean_239, sigma_239, peak_window);
+  c1->cd(10);
+  x.setRange(3202 - peak_window/2, 3202 + peak_window/2);
+  RooDataHist data3202("data3202", "3202 peak", x, Energy3202);
 
-  c5->cd(6);
-  x.setRange(239 - peak_window/2, 239 + peak_window/2);
-  RooDataHist data239("data239", "239 peak", x, Energy239);
-
-  RooPlot* frame239 = x.frame(Title("RooPlot of x"));
+  RooPlot* frame3202 = x.frame(Title("RooPlot of x"));
   
-  data239.plotOn(frame239);
+  data3202.plotOn(frame3202);
   
-  mean.setVal(239);
-  mean.setRange(239-2, 239+2);
+  mean.setVal(3202);
+  mean.setRange(3202-2, 3202+2);
   
-  gausslin.fitTo(data239);
-  gausslin.plotOn(frame239);
-  gausslin.plotOn(frame239, Components(p2), LineStyle(kDashed));
+  gausslin.fitTo(data3202);
+  gausslin.plotOn(frame3202);
+  gausslin.plotOn(frame3202, Components(p2), LineStyle(kDashed));
 
   gaussfrac.Print();
   mean.Print();
@@ -455,68 +615,145 @@ void plot_AllString_calibrationPeaks() {
   a0.Print();
   a1.Print();
 
-  Double_t efficiency_239 = gaussfrac.getVal();
-  cout << efficiency_239 << endl;
-  cout << efficiency_338 << endl;
-  cout << efficiency_583 << endl;
-  cout << efficiency_911 << endl;
-  cout << efficiency_969 << endl;
-  cout << efficiency_2615 << endl;
+  Double_t efficiency_3202 = gaussfrac.getVal();
   
-  
-  frame239->Draw();
+  frame3202->Draw();
   
   for (int i = 0; i < 5; i++) {
     lineargaus->ReleaseParameter(i);
   }
   
+  // begin new stuffs
+  c2->cd(11);
+  t1->Draw("Ener1 >> Energy3451", multiplicity);
+  lineargaus->SetParameter(2,3451);
+  lineargaus->SetParameter(3,5);
+  Energy3451->Fit("linear+gaus");
+  Double_t offset_3451 = lineargaus->GetParameter(0);
+  Double_t linear_3451 = lineargaus->GetParameter(4);
+  Double_t amplitude_3451 = lineargaus->GetParameter(1);
+  Double_t mean_3451 = lineargaus->GetParameter(2);
+  Double_t sigma_3451 = lineargaus->GetParameter(3);
+  
+  c1->cd(11);
+  x.setRange(3451 - peak_window/2, 3451 + peak_window/2);
+  RooDataHist data3451("data3451", "3451 peak", x, Energy3451);
+
+  RooPlot* frame3451 = x.frame(Title("RooPlot of x"));
+  
+  data3451.plotOn(frame3451);
+  
+  mean.setVal(3451);
+  mean.setRange(3451-2, 3451+2);
+  
+  gausslin.fitTo(data3451);
+  gausslin.plotOn(frame3451);
+  gausslin.plotOn(frame3451, Components(p2), LineStyle(kDashed));
+
+  gaussfrac.Print();
+  mean.Print();
+  sigma.Print();
+  a0.Print();
+  a1.Print();
+
+  Double_t efficiency_3451 = gaussfrac.getVal();
+    
+  frame3451->Draw();
+  
+  for (int i = 0; i < 5; i++) {
+    lineargaus->ReleaseParameter(i);
+  }
+  
+
+  // Print all the efficiencies
+  cout << "Efficiency 2599: " << efficiency_2599 << endl;
+  cout << "Efficiency 847: "  << efficiency_847  << endl;
+  cout << "Efficiency 1238: " << efficiency_1238 << endl;
+  cout << "Efficiency 511: "  << efficiency_511  << endl;
+  cout << "Efficiency 1771: " << efficiency_1771 << endl;
+  cout << "Efficiency 1037: " << efficiency_1037 << endl;
+  cout << "Efficiency 3254: " << efficiency_3254 << endl;
+  cout << "Efficiency 2035: " << efficiency_2035 << endl;
+  cout << "Efficiency 1360: " << efficiency_1360 << endl;
+  cout << "Efficiency 3202: " << efficiency_3202 << endl;
+  cout << "Efficiency 3451: " << efficiency_3451 << endl;
+
+
+  // Stacked histogram to contain the number of events at each peak
   THStack *hs = new THStack("hs", "All Peaks");
+
+  // Make cuts at the energies of each peak
+  TCut cut3 = "Ener1 > 2589";
+  TCut cut4 = "Ener1 < 2609";
+  TCut cut2599 = cut3 && cut4 && multiplicity;
+
+  TCut cut5 = "Ener1 > 837";
+  TCut cut6 = "Ener1 < 857";
+  TCut cut847 = cut5 && cut6 && multiplicity;
+
+  TCut cut7 = "Ener1 > 1228";
+  TCut cut8 = "Ener1 < 1248";
+  TCut cut1238 = cut7 && cut8 && multiplicity;
+
+  TCut cut9 = "Ener1 > 501";
+  TCut cut10 = "Ener1 < 523";
+  TCut cut511 = cut9 && cut10 && multiplicity;
+
+  TCut cut11 = "Ener1 > 1761";
+  TCut cut12 = "Ener1 < 1781";
+  TCut cut1771 = cut11 && cut12 && multiplicity;
+
+  TCut cut13 = "Ener1 > 1027";
+  TCut cut14 = "Ener1 < 1047";
+  TCut cut1037 = cut13 && cut14 && multiplicity;
+
+  TCut cut15 = "Ener1 > 3244";
+  TCut cut16 = "Ener1 < 3264";
+  TCut cut3254 = cut15 && cut16 && multiplicity;
   
-  TCut cut3 = "Ener1 > 2605";
-  TCut cut4 = "Ener1 < 2625";
-  TCut cut2615 = cut3 && cut4 && multiplicity;
+  TCut cut17 = "Ener1 > 2000";
+  TCut cut18 = "Ener1 < 2045";
+  TCut cut2035 = cut17 && cut18 && multiplicity;
+  
+  TCut cut19 = "Ener1 > 1350";
+  TCut cut20 = "Ener1 < 1370";
+  TCut cut1360 = cut19 && cut20 && multiplicity;
 
-  TCut cut5 = "Ener1 > 959";
-  TCut cut6 = "Ener1 < 979";
-  TCut cut969 = cut5 && cut6 && multiplicity;
+  TCut cut21 = "Ener1 > 3192";
+  TCut cut22 = "Ener1 < 3212";
+  TCut cut3202 = cut21 && cut22 && multiplicity;
+  
+  TCut cut23 = "Ener1 > 3441";
+  TCut cut24 = "Ener1 < 3461";
+  TCut cut3451 = cut23 && cut24 && multiplicity;
+ 
+  TCanvas* c4 = new TCanvas("c4", "c4", 600, 600);
+  c4->cd();
 
-  TCut cut7 = "Ener1 > 901";
-  TCut cut8 = "Ener1 < 921";
-  TCut cut911 = cut7 && cut8 && multiplicity;
+  t1->Draw("Channel >> Peak2599", cut2599, "goff");
+  t1->Draw("Channel >> Peak847", cut847, "goff");
+  t1->Draw("Channel >> Peak1238", cut1238, "goff");
+  t1->Draw("Channel >> Peak511", cut511, "goff");
+  t1->Draw("Channel >> Peak1771", cut1771, "goff");
+  t1->Draw("Channel >> Peak1037", cut1037, "goff");
+  t1->Draw("Channel >> Peak3254", cut3254, "goff");
+  t1->Draw("Channel >> Peak2035", cut2035, "goff");
+  t1->Draw("Channel >> Peak1360", cut1360, "goff");
+  t1->Draw("Channel >> Peak3202", cut3202, "goff");
+  t1->Draw("Channel >> Peak3451", cut3451, "goff");
 
-  TCut cut9 = "Ener1 > 573";
-  TCut cut10 = "Ener1 < 593";
-  TCut cut583 = cut9 && cut10 && multiplicity;
-
-  TCut cut11 = "Ener1 > 323";
-  TCut cut12 = "Ener1 < 353";
-  TCut cut338 = cut11 && cut12 && multiplicity;
-
-  TCut cut13 = "Ener1 > 229";
-  TCut cut14 = "Ener1 < 249";
-  TCut cut239 = cut13 && cut14 && multiplicity;
-
-  TCanvas* c2 = new TCanvas("c2", "c2", 600, 600);
-  c2->cd();
-
-  t1->Draw("Channel >> Peak2615", cut2615);
-  t1->Draw("Channel >> Peak969", cut969);
-  t1->Draw("Channel >> Peak911", cut911);
-  t1->Draw("Channel >> Peak583", cut583);
-  t1->Draw("Channel >> Peak338", cut338);
-  t1->Draw("Channel >> Peak239", cut239);
-
-  TCanvas* c3 = new TCanvas("c3", "c3", 600, 600);
-  c3->cd();
-  Peak239->Draw();
-  c2->cd();
-
-  Peak2615->Scale(efficiency_2615);
-  Peak969->Scale(efficiency_969);
-  Peak911->Scale(efficiency_911);
-  Peak583->Scale(efficiency_583);
-  Peak338->Scale(efficiency_338);
-  Peak239->Scale(efficiency_239);
+   // Reduce each peak by their efficiency
+  Peak2599->Scale(efficiency_2599);
+  Peak847->Scale(efficiency_847);
+  Peak1238->Scale(efficiency_1238);
+  Peak511->Scale(efficiency_511);
+  Peak1771->Scale(efficiency_1771);
+  Peak1037->Scale(efficiency_1037);
+  Peak3254->Scale(efficiency_3254);
+  Peak2035->Scale(efficiency_2035);
+  Peak1360->Scale(efficiency_1360);
+  Peak3202->Scale(efficiency_3202);
+  Peak3451->Scale(efficiency_3451);
   
   //FullString->Scale(0.06923); // reduce to counts per hour
   //FullString->Scale(0.2778); // reduce to mHz
@@ -527,20 +764,29 @@ void plot_AllString_calibrationPeaks() {
   FullString->SetFillColor(kBlue);
   */
 
+  Peak1771->SetLineColor(kAzure);
+  Peak2599->SetLineColor(kSpring);
+  Peak847->SetLineColor(kMagenta);
+  Peak1238->SetLineColor(kOrange);
+  Peak511->SetLineColor(kRed);
+  Peak1037->SetLineColor(kCyan);
+  Peak3254->SetLineColor(kPink);
+  Peak2035->SetLineColor(kViolet);
+  Peak1360->SetLineColor(kGreen);
+  Peak3202->SetLineColor(kBlack);
+  Peak3451->SetLineColor(kYellow);
 
-  Peak338->SetLineColor(kAzure);
-  Peak2615->SetLineColor(kSpring);
-  Peak969->SetLineColor(kMagenta);
-  Peak911->SetLineColor(kOrange);
-  Peak583->SetLineColor(kRed);
-  Peak239->SetLineColor(kCyan);
-
-  hs->Add(Peak2615);
-  hs->Add(Peak969);
-  hs->Add(Peak911);
-  hs->Add(Peak583);
-  hs->Add(Peak338);
-  hs->Add(Peak239);
+  hs->Add(Peak2599);
+  hs->Add(Peak847);
+  hs->Add(Peak1238);
+  hs->Add(Peak511);
+  hs->Add(Peak1771);
+  hs->Add(Peak1037);
+  hs->Add(Peak3254);
+  hs->Add(Peak2035);
+  hs->Add(Peak1360);
+  hs->Add(Peak3202);
+  hs->Add(Peak3451);
 
   hs->Draw("nostack");
   hs->GetXaxis()->SetTitle("Channel");
@@ -554,80 +800,104 @@ void plot_AllString_calibrationPeaks() {
 
   Int_t Channel;
 
-  Double_t Rate_2615;
-  Double_t Rate_969;
-  Double_t Rate_911;
-  Double_t Rate_583;
-  Double_t Rate_338;
-  Double_t Rate_239;
+  Double_t Rate_2599;
+  Double_t Rate_847;
+  Double_t Rate_1238;
+  Double_t Rate_511;
+  Double_t Rate_1771;
+  Double_t Rate_1037;
+  Double_t Rate_3254;
+  Double_t Rate_2035;
+  Double_t Rate_1360;
+  Double_t Rate_3202;
+  Double_t Rate_3451;
 
-  Double_t Rate_Max; //rate for 4 peaks calibrated
-  Double_t Rate_Min; //rate for 1 peak calibrated
-  Double_t Rate_Two; //rate for 2 peaks calibrated
-  Double_t Rate_Three; //rate for 3 peaks calibrated
-  Double_t Rate_Four; //rate for 4 peaks calibrated
-  Double_t Rate_Five; //rate for 5 peaks calibrated
+  Double_t Rate_Min; // rate for 1 peak calibrated
+  Double_t Rate_Two; // rate for 2 peaks calibrated
+  Double_t Rate_Three; // rate for 3 peaks calibrated
+  Double_t Rate_Four; // rate for 4 peaks calibrated
+  Double_t Rate_Five; // rate for 5 peaks calibrated
+  Double_t Rate_Six; // rate for 6 peaks calibrated
+  Double_t Rate_Seven; // rate for 7 peaks calibrated
+  Double_t Rate_Eight; // rate for 8 peaks calibrated
+  Double_t Rate_Nine; // rate for 9 peaks calibrated
+  Double_t Rate_Ten; // rate for 10 peaks calibrated
+  Double_t Rate_Max; //rate for 11 peaks calibrated
 
-  Double_t Time_2615;
-  Double_t Time_969;
-  Double_t Time_911;
-  Double_t Time_583;
-  Double_t Time_338;
-  Double_t Time_239;
+  Double_t Time_2599;
+  Double_t Time_847;
+  Double_t Time_1238;
+  Double_t Time_511;
+  Double_t Time_1771;
+  Double_t Time_1037;
+  Double_t Time_3254;
+  Double_t Time_2035;
+  Double_t Time_1360;
+  Double_t Time_3202;
+  Double_t Time_3451;
 
   Double_t Time_Min; //time for 1 peak calibrated
-  Double_t Time_Max;
   Double_t Time_Two;
   Double_t Time_Three;
   Double_t Time_Four;
   Double_t Time_Five;
+  Double_t Time_Six;
+  Double_t Time_Seven;
+  Double_t Time_Eight;
+  Double_t Time_Nine;
+  Double_t Time_Ten;
+  Double_t Time_Max;
 
-  Double_t Events_2615;
-  Double_t Events_969;
-  Double_t Events_911;
-  Double_t Events_583;
-  Double_t Events_338;
-  Double_t Events_239;
+  Double_t Events_2599;
+  Double_t Events_847;
+  Double_t Events_1238;
+  Double_t Events_511;
+  Double_t Events_1771;
+  Double_t Events_1037;
+  Double_t Events_3254;
+  Double_t Events_2035;
+  Double_t Events_1360;
+  Double_t Events_3202;
+  Double_t Events_3451;
 
-  Double_t Events_Max;
   Double_t Events_Min;
   Double_t Events_Two;
   Double_t Events_Three;
   Double_t Events_Four;
   Double_t Events_Five;
+  Double_t Events_Six;
+  Double_t Events_Seven;
+  Double_t Events_Eight;
+  Double_t Events_Nine;
+  Double_t Events_Ten;
+  Double_t Events_Max;
 
-  Int_t Calib_Peak583 = 0;
-  Int_t Calib_Peak2615 = 0;
-  Int_t Calib_Peak969 = 0;
-  Int_t Calib_Peak911 = 0;
-  Int_t Calib_Peak583and2615 = 0;
-  Int_t Calib_Peak583and969 = 0;
-  Int_t Calib_Peak583and911 = 0;
-  Int_t Calib_Peak2615and969 = 0;
-  Int_t Calib_Peak2615and911 = 0;
-  Int_t Calib_Peak969and911 = 0;
-  Int_t Calib_Peak583and2615and969 = 0;
-  Int_t Calib_Peak583and2615and911 = 0;
-  Int_t Calib_Peak583and969and911 = 0;
-  Int_t Calib_Peak2615and969and911 = 0;
 
-  tree->Branch("Rate_2615", &Rate_2615, "Rate_2615/D");
-  tree->Branch("CalibrationTime_2615", &Time_2615, "CalibrationTime_2615/D");
-  tree->Branch("Rate_969", &Rate_969, "Rate_969/D");
-  tree->Branch("CalibrationTime_969", &Time_969, "CalibrationTime_969/D");
-  tree->Branch("Rate_911", &Rate_911, "Rate_911/D");
-  tree->Branch("CalibrationTime_911", &Time_911, "CalibrationTime_591/D");
-  tree->Branch("Rate_583", &Rate_583, "Rate_583/D");
-  tree->Branch("CalibrationTime_583", &Time_583, "CalibrationTime_591/D");
-  tree->Branch("Rate_338", &Rate_338, "Rate_338/D");
-  tree->Branch("CalibrationTime_338", &Time_338, "CalibrationTime_338/D");
-  tree->Branch("Rate_239", &Rate_239, "Rate_239/D");
-  tree->Branch("CalibrationTime_239", &Time_239, "CalibrationTime_239/D");
-
-  tree->Branch("Rate_Max", &Rate_Max, "Rate_Max/D");
-  tree->Branch("CalibrationTime_Min", &Time_Min, "CalibrationTime_Min/D");
+  // Make the Branches for the tree (to be filled later)
+  tree->Branch("Rate_2599", &Rate_2599, "Rate_2599/D");
+  tree->Branch("CalibrationTime_2599", &Time_2599, "CalibrationTime_2599/D");
+  tree->Branch("Rate_847", &Rate_847, "Rate_847/D");
+  tree->Branch("CalibrationTime_847", &Time_847, "CalibrationTime_847/D");
+  tree->Branch("Rate_1238", &Rate_1238, "Rate_1238/D");
+  tree->Branch("CalibrationTime_1238", &Time_1238, "CalibrationTime_591/D");
+  tree->Branch("Rate_511", &Rate_511, "Rate_511/D");
+  tree->Branch("CalibrationTime_511", &Time_511, "CalibrationTime_591/D");
+  tree->Branch("Rate_1771", &Rate_1771, "Rate_1771/D");
+  tree->Branch("CalibrationTime_1771", &Time_1771, "CalibrationTime_1771/D");
+  tree->Branch("Rate_1037", &Rate_1037, "Rate_1037/D");
+  tree->Branch("CalibrationTime_1037", &Time_1037, "CalibrationTime_1037/D");
+   tree->Branch("Rate_3254", &Rate_3254, "Rate_3254/D");
+  tree->Branch("CalibrationTime_3254", &Time_3254, "CalibrationTime_3254/D");
+  tree->Branch("Rate_2035", &Rate_2035, "Rate_2035/D");
+  tree->Branch("CalibrationTime_2035", &Time_2035, "CalibrationTime_591/D");
+  tree->Branch("Rate_1360", &Rate_1360, "Rate_1360/D");
+  tree->Branch("CalibrationTime_1360", &Time_1360, "CalibrationTime_591/D");
+  tree->Branch("Rate_3202", &Rate_3202, "Rate_3202/D");
+  tree->Branch("CalibrationTime_3202", &Time_3202, "CalibrationTime_3202/D");
+  tree->Branch("Rate_3451", &Rate_3451, "Rate_3451/D");
+  tree->Branch("CalibrationTime_3451", &Time_3451, "CalibrationTime_3451/D");
   tree->Branch("Rate_Min", &Rate_Min, "Rate_Min/D");
-  tree->Branch("CalibrationTime_Max", &Time_Max, "CalibrationTime_Max/D");
+  tree->Branch("CalibrationTime_Min", &Time_Min, "CalibrationTime_Min/D");
   tree->Branch("Rate_Two", &Rate_Two, "Rate_Two/D");
   tree->Branch("CalibrationTime_Two", &Time_Two, "CalibrationTime_Two/D");
   tree->Branch("Rate_Three", &Rate_Three, "Rate_Three/D");
@@ -636,129 +906,468 @@ void plot_AllString_calibrationPeaks() {
   tree->Branch("CalibrationTime_Four", &Time_Four, "CalibrationTime_Four/D");
   tree->Branch("Rate_Five", &Rate_Five, "Rate_Five/D");
   tree->Branch("CalibrationTime_Five", &Time_Five, "CalibrationTime_Five/D");
+  tree->Branch("Rate_Six", &Rate_Six, "Rate_Six/D");
+  tree->Branch("CalibrationTime_Six", &Time_Six, "CalibrationTime_Six/D");
+  tree->Branch("Rate_Seven", &Rate_Seven, "Rate_Seven/D");
+  tree->Branch("CalibrationTime_Seven", &Time_Seven, "CalibrationTime_Seven/D");
+  tree->Branch("Rate_Eight", &Rate_Eight, "Rate_Eight/D");
+  tree->Branch("CalibrationTime_Eight", &Time_Eight, "CalibrationTime_Eight/D");
+  tree->Branch("Rate_Nine", &Rate_Nine, "Rate_Nine/D");
+  tree->Branch("CalibrationTime_Nine", &Time_Nine, "CalibrationTime_Nine/D");
+  tree->Branch("Rate_Ten", &Rate_Ten, "Rate_Ten/D");
+  tree->Branch("CalibrationTime_Ten", &Time_Ten, "CalibrationTime_Ten/D");
+  tree->Branch("Rate_Max", &Rate_Max, "Rate_Max/D");
+  tree->Branch("CalibrationTime_Max", &Time_Max, "CalibrationTime_Max/D");
 
   tree->Branch("Channel", &Channel, "Channel/I");
 
+  // Loop over the values in each bin to fill the tree
     for (int n = 0; n < nbins; n++) {
 
       //Get channel
-      Channel = TMath::CeilNint(Peak2615->GetBinCenter(n+1));
+      Channel = TMath::CeilNint(Peak2599->GetBinCenter(n+1));
 
       //get # of events for each peak and find max
-      Events_2615 = Peak2615->GetBinContent(n+1);
-      Events_969 = Peak969->GetBinContent(n+1);
-      Events_911 = Peak911->GetBinContent(n+1);
-      Events_583 = Peak583->GetBinContent(n+1);
-      Events_338 = Peak338->GetBinContent(n+1);
-      Events_239 = Peak239->GetBinContent(n+1);
+      Events_2599 = Peak2599->GetBinContent(n+1);
+      Events_847 = Peak847->GetBinContent(n+1);
+      Events_1238 = Peak1238->GetBinContent(n+1);
+      Events_511 = Peak511->GetBinContent(n+1);
+      Events_1771 = Peak1771->GetBinContent(n+1);
+      Events_1037 = Peak1037->GetBinContent(n+1);
+      Events_3254 = Peak3254->GetBinContent(n+1);
+      Events_2035 = Peak2035->GetBinContent(n+1);
+      Events_1360 = Peak1360->GetBinContent(n+1);
+      Events_3202 = Peak3202->GetBinContent(n+1);
+      Events_3451 = Peak3451->GetBinContent(n+1);
 
-      Double_t Events[6] = {Events_2615, Events_969, Events_911, Events_338, Events_239};
+      Double_t Events[11] = {Events_2599, Events_847, Events_1238, Events_1771, Events_1037, Events_3254, Events_2035, Events_1360, Events_3202, Events_3451}; 
+      // sort algorithm. There are definitely better ways to do this. But the ones I see are for c++0x/11, which is sad. So here we are with the dumb sort :`(
+      if (Events_511 >= Events_2599) {
+	Events_Max = Events_511;
+	Events_Two = Events_2599;
+      }
+      else {
+	Events_Max = Events_2599;
+	Events_Two = Events_511;
+      }
+      if (Events_847 >= Events_Max) {
+	Events_Three = Events_Two;
+	Events_Two = Events_Max;
+	Events_Max = Events_847;
+      }
+      else if (Events_847 >= Events_Two) {
+	Events_Three = Events_Two;
+	Events_Two = Events_847;
+      }
+      else {
+	Events_Three = Events_847;
+      }
+      if (Events_1238 >= Events_Max) {
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_Max;
+	Events_Max = Events_1238;
+      }
+      else if (Events_1238 >= Events_Two) {
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_1238;
+      }
+      else if (Events_1238 >= Events_Three) {
+	Events_Four = Events_Three;
+	Events_Three = Events_1238;
+      }
+      else {
+	Events_Four = Events_1238;
+      }
+      if (Events_1771 >= Events_Max) {
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_Max;
+	Events_Max = Events_1771;
+      }
+      else if (Events_1771 >= Events_Two) {
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_1771;
+      }
+      else if (Events_1771 >= Events_Three) {
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_1771;
+      }
+      else if (Events_1771 >= Events_Four) {
+	Events_Five = Events_Four;
+	Events_Four = Events_1771;
+      }
+      else {
+	Events_Five = Events_1771;
+      }
+      if (Events_1037 >= Events_Max) {
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_Max;
+	Events_Max = Events_1037;
+      }
+      else if (Events_1037 >= Events_Two) {
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_1037;
+      }
+      else if(Events_1037 >= Events_Three) {
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_1037;
+      }
+      else if(Events_1037 >= Events_Four) {
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_1037;
+      }
+      else if(Events_1037 >= Events_Five) {
+	Events_Six = Events_Five;
+	Events_Five = Events_1037;
+      }
+      else {
+	Events_Six = Events_1037;
+      }
+      if(Events_3254 >= Events_Max) {
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_Max;
+	Events_Max = Events_3254;
+      }
+      else if (Events_3254 >= Events_Two) {
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_3254;
+      }
+      else if (Events_3254 >= Events_Three) {
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Events_3254;
+      }
+      else if (Events_3254 >= Events_Four) {
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_3254;
+      }
+      else if (Events_3254 >= Events_Five) {
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_3254;
+      }
+      else if (Events_3254 >= Events_Six) {
+	Events_Seven = Events_Six;
+	Events_Six = Events_3254;
+      }
+      else {
+	Events_Seven = Events_3254;
+      }
+      if (Events_2035 >= Events_Max) {
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_Max;
+	Events_Max = Events_2035;
+      }
+      else if (Events_2035 >= Events_Two) {
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_2035;
+      }
+      else if (Events_2035 >= Events_Three) {
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_2035;
+      }
+      else if (Events_2035 >= Events_Four) {
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_2035;
+      }
+      else if (Events_2035 >= Events_Five) {
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_2035;
+      }
+      else if (Events_2035 >= Events_Six) {
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_2035;
+      }
+      else if (Events_2035 >= Events_Seven) {
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_2035;
+      }
+      else {
+	Events_Eight = Events_2035;
+      }
+      if (Events_1360 >= Events_Max) {
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_Max;
+	Events_Max = Events_1360;
+      }
+      else if (Events_1360 >= Events_Two) {
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_1360;
+      }
+      else if (Events_1360 >= Events_Three) {
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_1360;
+      }
+      else if (Events_1360 >= Events_Four) {
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_1360;
+      }
+      else if (Events_1360 >= Events_Five) {
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_1360;
+      }
+      else if (Events_1360 >= Events_Six) {
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_1360;
+      }
+      else if (Events_1360 >= Events_Seven) {
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_1360;
+      }
+      else if (Events_1360 >= Events_Eight) {
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_1360;
+      }
+      else {
+	Events_Nine = Events_1360;
+      }
+      if (Events_3202 >= Events_Max) {
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_Max;
+	Events_Max = Events_3202;
+      }
+      else if (Events_3202 >= Events_Two) {
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_Two;
+	Events_Two = Events_3202;
+      }
+      else if (Events_3202 >= Events_Three) {
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_Three;
+	Events_Three = Events_3202;
+      }
+      else if (Events_3202 >= Events_Four) {
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_Four;
+	Events_Four = Events_3202;
+      }
+      else if (Events_3202 >= Events_Five) {
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_3202;
+      }
+      else if (Events_3202 >= Events_Six) {
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_3202;
+      }
+      else if (Events_3202 >= Events_Seven) {
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_3202;
+      }
+      else if (Events_3202 >= Events_Eight) {
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_3202;
+      }
+      else if (Events_3202 >= Events_Nine) {
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_3202;
+      }
+      else {
+	Events_Ten = Events_3202;
+      }
 
-      // sort algorithm
-      if (Events_583 >= Events_2615) {
-	Events_Max = Events_583;
-	Events_Two = Events_2615;
-      }
-      else {
-	Events_Max = Events_2615;
-	Events_Two = Events_583;
-      }
-      if (Events_969 >= Events_Max) {
-	Events_Three = Events_Two;
-	Events_Two = Events_Max;
-	Events_Max = Events_969;
-      }
-      else if (Events_969 >= Events_Two) {
-	Events_Three = Events_Two;
-	Events_Two = Events_969;
-      }
-      else {
-	Events_Three = Events_969;
-      }
-      if (Events_911 >= Events_Max) {
-	Events_Four = Events_Three;
-	Events_Three = Events_Two;
-	Events_Two = Events_Max;
-	Events_Max = Events_911;
-      }
-      else if (Events_911 >= Events_Two) {
-	Events_Four = Events_Three;
-	Events_Three = Events_Two;
-	Events_Two = Events_911;
-      }
-      else if (Events_911 >= Events_Three) {
-	Events_Four = Events_Three;
-	Events_Three = Events_911;
-      }
-      else {
-	Events_Four = Events_911;
-      }
-      if (Events_338 >= Events_Max) {
+      if (Events_3451 >= Events_Max) {
+	Events_Min = Events_Ten;
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
 	Events_Five = Events_Four;
 	Events_Four = Events_Three;
 	Events_Three = Events_Two;
 	Events_Two = Events_Max;
-	Events_Max = Events_338;
+	Events_Max = Events_3451;
       }
-      else if (Events_338 >= Events_Two) {
+      else if (Events_3451 >= Events_Two) {
+	Events_Min = Events_Ten;
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
 	Events_Five = Events_Four;
 	Events_Four = Events_Three;
 	Events_Three = Events_Two;
-	Events_Two = Events_338;
+	Events_Two = Events_3451;
       }
-      else if (Events_338 >= Events_Three) {
+      else if (Events_3451 >= Events_Three) {
+	Events_Min = Events_Ten;
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
 	Events_Five = Events_Four;
 	Events_Four = Events_Three;
-	Events_Three = Events_338;
+	Events_Three = Events_3451;
       }
-      else if (Events_338 >= Events_Four) {
+      else if (Events_3451 >= Events_Four) {
+	Events_Min = Events_Ten;
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
 	Events_Five = Events_Four;
-	Events_Four = Events_338;
+	Events_Four = Events_3451;
+      }
+      else if (Events_3451 >= Events_Five) {
+	Events_Min = Events_Ten;
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_Five;
+	Events_Five = Events_3451;
+      }
+      else if (Events_3451 >= Events_Six) {
+	Events_Min = Events_Ten;
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_Six;
+	Events_Six = Events_3451;
+      }
+      else if (Events_3451 >= Events_Seven) {
+	Events_Min = Events_Ten;
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_Seven;
+	Events_Seven = Events_3451;
+      }
+      else if (Events_3451 >= Events_Eight) {
+	Events_Min = Events_Ten;
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_Eight;
+	Events_Eight = Events_3451;
+      }
+      else if (Events_3451 >= Events_Nine) {
+	Events_Min = Events_Ten;
+	Events_Ten = Events_Nine;
+	Events_Nine = Events_3451;
+      }
+      else if (Events_3451 >= Events_Ten) {
+	Events_Min = Events_Ten;
+	Events_Ten = Events_3451;
       }
       else {
-	Events_Five = Events_338;
+	Events_Min = Events_3451;
       }
-      if (Events_239 >= Events_Max) {
-	Events_Min = Events_Five;
-	Events_Five = Events_Four;
-	Events_Four = Events_Three;
-	Events_Three = Events_Two;
-	Events_Two = Events_Max;
-	Events_Max = Events_239;
-      }
-      else if (Events_239 >= Events_Two) {
-	Events_Min = Events_Five;
-	Events_Five = Events_Four;
-	Events_Four = Events_Three;
-	Events_Three = Events_Two;
-	Events_Two = Events_239;
-      }
-      else if(Events_239 >= Events_Three) {
-	Events_Min = Events_Five;
-	Events_Five = Events_Four;
-	Events_Four = Events_Three;
-	Events_Three = Events_239;
-      }
-      else if(Events_239 >= Events_Four) {
-	Events_Min = Events_Five;
-	Events_Five = Events_Four;
-	Events_Four = Events_239;
-      }
-      else if(Events_239 >= Events_Five) {
-	Events_Min = Events_Five;
-	Events_Five = Events_239;
-      }
-      else {
-	Events_Min = Events_239;
-      }
+
       /*
       cout << "*************" << endl;
-      cout << "Events_2615: " << Events_2615 << endl;
-      cout << "Events_969: " << Events_969 << endl;
-      cout << "Events_911: " << Events_911 << endl;
-      cout << "Events_583: " << Events_583 << endl;
-      cout << "Events_338: " << Events_338 << endl;
-      cout << "Events_239: " << Events_239 << endl;
+      cout << "Events_2599: " << Events_2599 << endl;
+      cout << "Events_847: " << Events_847 << endl;
+      cout << "Events_1238: " << Events_1238 << endl;
+      cout << "Events_511: " << Events_511 << endl;
+      cout << "Events_1771: " << Events_1771 << endl;
+      cout << "Events_1037: " << Events_1037 << endl;
 
       cout << "Events_Max: " << Events_Max << endl;
       cout << "Events_Two: " << Events_Two << endl;
@@ -767,58 +1376,77 @@ void plot_AllString_calibrationPeaks() {
       cout << "Events_Five: " << Events_Five << endl;
       cout << "Events_Min: " << Events_Min << endl;
       */
-      Rate_2615 = Events_2615 * time_scaling * 0.2778;
-      Rate_969 = Events_969 * time_scaling * 0.2778;
-      Rate_911 = Events_911 * time_scaling * 0.2778;
-      Rate_583 = Events_583 * time_scaling * 0.2778;
-      Rate_338 = Events_338 * time_scaling * 0.2778;
-      Rate_239 = Events_239 * time_scaling * 0.2778;
+      Rate_2599 = Events_2599 * time_scaling * 0.2778;
+      Rate_847 = Events_847 * time_scaling * 0.2778;
+      Rate_1238 = Events_1238 * time_scaling * 0.2778;
+      Rate_511 = Events_511 * time_scaling * 0.2778;
+      Rate_1771 = Events_1771 * time_scaling * 0.2778;
+      Rate_1037 = Events_1037 * time_scaling * 0.2778;      
+      Rate_3254 = Events_3254 * time_scaling * 0.2778;
+      Rate_2035 = Events_2035 * time_scaling * 0.2778;
+      Rate_1360 = Events_1360 * time_scaling * 0.2778;
+      Rate_3202 = Events_3202 * time_scaling * 0.2778;
+      Rate_3451 = Events_3451 * time_scaling * 0.2778;
 
       Rate_Max = Events_Max * time_scaling * 0.2778;
-      Rate_Min = Events_Min * time_scaling * 0.2778;
       Rate_Two = Events_Two * time_scaling * 0.2778;
       Rate_Three = Events_Three * time_scaling * 0.2778;
       Rate_Four = Events_Four * time_scaling * 0.2778;
       Rate_Five = Events_Five * time_scaling * 0.2778;
+      Rate_Six = Events_Six * time_scaling * 0.2778;
+      Rate_Seven = Events_Seven * time_scaling * 0.2778;
+      Rate_Eight = Events_Eight * time_scaling * 0.2778;
+      Rate_Nine = Events_Nine * time_scaling * 0.2778;
+      Rate_Ten = Events_Ten * time_scaling * 0.2778;   
+      Rate_Min = Events_Min * time_scaling * 0.2778;
 
-      Time_2615 = eventsToCalibrate / (86.0 * Rate_2615);
-      Time_969 = eventsToCalibrate / (86.0 * Rate_969);
-      Time_911 = eventsToCalibrate / (86.0 * Rate_911);
-      Time_583 = eventsToCalibrate / (86.0 * Rate_583);
-      Time_338 = eventsToCalibrate / (86.0 * Rate_338);
-      Time_239 = eventsToCalibrate / (86.0 * Rate_239);
- 
-      Time_Min = eventsToCalibrate / (86.0 * Rate_Max);
+      Time_2599 = eventsToCalibrate / (86.0 * Rate_2599);
+      Time_847 = eventsToCalibrate / (86.0 * Rate_847);
+      Time_1238 = eventsToCalibrate / (86.0 * Rate_1238);
+      Time_511 = eventsToCalibrate / (86.0 * Rate_511);
+      Time_1771 = eventsToCalibrate / (86.0 * Rate_1771);
+      Time_1037 = eventsToCalibrate / (86.0 * Rate_1037);
+      Time_3254 = eventsToCalibrate / (86.0 * Rate_3254);
+      Time_2035 = eventsToCalibrate / (86.0 * Rate_2035);
+      Time_1360 = eventsToCalibrate / (86.0 * Rate_1360);
+      Time_3202 = eventsToCalibrate / (86.0 * Rate_3202);
+      Time_3451 = eventsToCalibrate / (86.0 * Rate_3451);
+
       Time_Max = eventsToCalibrate / (86.0 * Rate_Min);
       Time_Two = eventsToCalibrate / (86.0 * Rate_Two);
       Time_Three = eventsToCalibrate / (86.0 * Rate_Three);
       Time_Four = eventsToCalibrate / (86 * Rate_Four);
       Time_Five = eventsToCalibrate / (86 * Rate_Five);
+      Time_Six = eventsToCalibrate / (86.0 * Rate_Six);
+      Time_Seven = eventsToCalibrate / (86.0 * Rate_Seven);
+      Time_Eight = eventsToCalibrate / (86.0 * Rate_Eight);
+      Time_Nine = eventsToCalibrate / (86 * Rate_Nine);
+      Time_Ten = eventsToCalibrate / (86 * Rate_Ten);
+      Time_Min = eventsToCalibrate / (86.0 * Rate_Max);
 
-
-      if (Rate_583 <= 0.1 || Rate_2615 <= 0.1 || Rate_969 <= 0.1 || Rate_911 <= 0.1 || Rate_338 <= 0.1 || Rate_239 <= 0.1) {
+      /*if (Rate_511 <= 0.1 || Rate_2599 <= 0.1 || Rate_847 <= 0.1 || Rate_1238 <= 0.1 || Rate_1771 <= 0.1 || Rate_1037 <= 0.1 || Rate_3254 <=0.1 || Rate_2035 <=0.1 || Rate_1360 <=0.1 || Rate_3202 <=0.1 || Rate_3451 <=0.1) {
 	cout << "Rate Error " << endl;
-	cout << "Rate 583: " << Rate_583 << " Rate 2615: " << Rate_2615 << " Rate 969: " << Rate_969 << " Rate 911: " << Rate_911 << " Rate 338: " << Rate_338 << " Rate 239: " << Rate_239 <<endl;
-      }
+	cout << "Rate 511: " << Rate_511 << " Rate 2599: " << Rate_2599 << " Rate 847: " << Rate_847 << " Rate 1238: " << Rate_1238 << " Rate 1771: " << Rate_1771 << " Rate 1037: " << Rate_1037 << " Rate 3254: " << Rate_3254 << " Rate 2035: " << Rate_2035 << " Rate 1360: " << Rate_1360 << " Rate 3202: " << Rate_3202 << " Rate 3451: " << Rate_3451 << endl;
+	}*/
 
       tree->Fill();
     }
     /*
       cout << "# of channels calibrated by peak" << endl;
-      cout << "583: " << Calib_Peak583 << endl;
-      cout << "2615: " << Calib_Peak2615 << endl;
-      cout << "969: " << Calib_Peak969 << endl;
-      cout << "911: " << Calib_Peak911 << endl;
-      cout << "583 and 2615: " << Calib_Peak583and2615 << endl;
-      cout << "583 and 969: " << Calib_Peak583and969 << endl;
-      cout << "583 and 911: " << Calib_Peak583and911 << endl;
-      cout << "2615 and 969: " << Calib_Peak2615and969 << endl;
-      cout << "2615 and 911: " << Calib_Peak2615and911 << endl;
-      cout << "969 and 911: " << Calib_Peak969and911 << endl;
-      cout << "583 and 2615 and 969: " << Calib_Peak583and2615and969 << endl;
-      cout << "583 and 2615 and 911: " << Calib_Peak583and2615and911 << endl;
-      cout << "583 and 969 and 911: " << Calib_Peak583and969and911 << endl;
-      cout << "2615 and 969 and 911: " << Calib_Peak2615and969and911 << endl;
+      cout << "511: " << Calib_Peak511 << endl;
+      cout << "2599: " << Calib_Peak2599 << endl;
+      cout << "847: " << Calib_Peak847 << endl;
+      cout << "1238: " << Calib_Peak1238 << endl;
+      cout << "511 and 2599: " << Calib_Peak511and2599 << endl;
+      cout << "511 and 847: " << Calib_Peak511and847 << endl;
+      cout << "511 and 1238: " << Calib_Peak511and1238 << endl;
+      cout << "2599 and 847: " << Calib_Peak2599and847 << endl;
+      cout << "2599 and 1238: " << Calib_Peak2599and1238 << endl;
+      cout << "847 and 1238: " << Calib_Peak847and1238 << endl;
+      cout << "511 and 2599 and 847: " << Calib_Peak511and2599and847 << endl;
+      cout << "511 and 2599 and 1238: " << Calib_Peak511and2599and1238 << endl;
+      cout << "511 and 847 and 1238: " << Calib_Peak511and847and1238 << endl;
+      cout << "2599 and 847 and 1238: " << Calib_Peak2599and847and1238 << endl;
     */
 
 

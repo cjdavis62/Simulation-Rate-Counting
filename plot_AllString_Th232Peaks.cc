@@ -73,7 +73,7 @@ Double_t Acceptance_lineardoublegaus(Double_t offset, Double_t linear, Double_t 
   return (signal / (background+signal));
 }
 
-void plot_AllString_calibrationPeaks() {
+void plot_AllString_Th232Peaks() {
 
   int nbins = 988;
   int energy_bins = 200;
