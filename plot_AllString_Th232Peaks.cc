@@ -112,14 +112,14 @@ void plot_AllString_Th232Peaks() {
   // begin RooFits
 
   // Single Gaussian
-  RooRealVar x("x", "x", 0, 3000);
-  RooRealVar mean("mean", "mean of gaussian", 10, 0, 3000);
+  RooRealVar x("x", "x", 0, 4000);
+  RooRealVar mean("mean", "mean of gaussian", 10, 0, 4000);
   RooRealVar sigma("sigma", "width of gaussian", 1, 0, 10);
 
   RooGaussian gauss("gauss", "gaussian PDF", x, mean, sigma);
 
   // Second Gaussian
-  RooRealVar mean2("mean2", "mean of secondary gaussian", 0, 0, 3000);
+  RooRealVar mean2("mean2", "mean of secondary gaussian", 0, 0, 4000);
   RooRealVar sigma2("sigma2", "sigma of secondary gaussian", 1, 0, 10);
   
   RooGaussian gauss2("gauss2", "secondary gaussian PDF", x, mean2, sigma2);
@@ -309,7 +309,6 @@ void plot_AllString_Th232Peaks() {
   c4->cd(4);
 
   t1->Draw("Ener1 >> Energy583", multiplicity, "goff");
-
 
   lineargaus->SetParameter(2,583);
   lineargaus->SetParameter(3,5);

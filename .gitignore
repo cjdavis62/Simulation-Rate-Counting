@@ -1,2 +1,4 @@
 *.root
 *~
+Co56_PeakFits/cpp_files/*
+Co56_PeakFits/Output/*
