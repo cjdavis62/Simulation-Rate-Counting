@@ -91,7 +91,8 @@ void peak__peak_number_() {
   TCut multiplicity = "Multiplicity == 1";
 
   // open the file and the tree
-  TFile* f1 = new TFile("/data-mgm/cuore/simulation/Byron/Cobalt56/StringsCobalt_g4cuore.root");
+  //TFile* f1 = new TFile("/data-mgm/cuore/simulation/Byron/Cobalt56/StringsCobalt_g4cuore.root");
+  TFile* f1 = new TFile("_filename_");
   TTree* t1 = (TTree*)f1->Get("outTree");
 
   // Per channel histograms for each peak

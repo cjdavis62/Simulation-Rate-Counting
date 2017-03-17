@@ -1,8 +1,5 @@
-/* This script takes in a g4cuore processed ROOT File and performs fits to the peaks
-These peaks are then analyzed for the ratio of signal/background events
-With the number of signal events, it is then calculated how long it would take to get 50 events per channel per peak
-
-This script in particular is for Co56 spectra in a file called AllString_g4cuore.root
+/* 
+This script will take in the values from the efficiency file created by Fitting.py and then generate the root file with the rates for each peak
 
 Written by: Christopher Davis
 christopher.davis@yale.edu
