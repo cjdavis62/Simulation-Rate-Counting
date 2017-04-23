@@ -631,7 +631,6 @@ void plot_AllString_Th232Peaks() {
 
       //Get channel
       Channel = TMath::CeilNint(Peak2615->GetBinCenter(n+1));
-
       //get # of events for each peak and find max
       Events_2615 = Peak2615->GetBinContent(n+1);
       Events_969 = Peak969->GetBinContent(n+1);

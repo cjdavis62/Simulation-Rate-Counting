@@ -75,7 +75,7 @@ void plot_AllString_Co56Peaks() {
   TCut multiplicity = "Multiplicity == 1";
 
   // open the file and the tree
-  TFile* f1 = new TFile("/data-mgm/cuore/simulation/Byron/Cobalt56/StringsCobalt_g4cuore.root");
+  TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/Co56/Co56_w_new_g4cuore.root");
   TTree* t1 = (TTree*)f1->Get("outTree");
   
   int nbins = 988;
@@ -83,6 +83,19 @@ void plot_AllString_Co56Peaks() {
   double time_scaling = 0.01115; // scale from events to events per hour
 
   double eventsToCalibrate = 50; // How many events to require for a channel to be calibrated
+
+  // Empty histograms to be filled by tree
+  TH1F* Peak2599 = new TH1F("Peak2599", "Peak2599", nbins, 0, 988);
+  TH1F* Peak847 = new TH1F("Peak847", "Peak847", nbins, 0, 988);
+  TH1F* Peak1238 = new TH1F("Peak1238", "Peak1238", nbins, 0, 988);
+  TH1F* Peak511 = new TH1F("Peak511", "Peak511", nbins, 0, 988);
+  TH1F* Peak1771 = new TH1F("Peak1771", "Peak1771", nbins, 0, 988);
+  TH1F* Peak1037 = new TH1F("Peak1037", "Peak1037", nbins, 0, 988);
+  TH1F* Peak3254 = new TH1F("Peak3254", "Peak3254", nbins, 0, 988);
+  TH1F* Peak2035 = new TH1F("Peak2035", "Peak2035", nbins, 0, 988);
+  TH1F* Peak1360 = new TH1F("Peak1360", "Peak1360", nbins, 0, 988);
+  TH1F* Peak3202 = new TH1F("Peak3202", "Peak3202", nbins, 0, 988);
+  TH1F* Peak3451 = new TH1F("Peak3451", "Peak3451", nbins, 0, 988);
 
   // Stacked histogram to contain the number of events at each peak
   THStack *hs = new THStack("hs", "All Peaks");
@@ -135,27 +148,27 @@ void plot_AllString_Co56Peaks() {
   TCanvas* c4 = new TCanvas("c4", "c4", 600, 600);
   c4->cd();
   cout << "Drawing 2599:" << endl;
-  t1->Draw("Channel >> Peak2599", cut2599, "goff");
+  t1->Draw("Channel >> Peak2599", cut2599);
   cout << "Drawing 847:" << endl;
-  t1->Draw("Channel >> Peak847", cut847, "goff");
+  t1->Draw("Channel >> Peak847", cut847);
   cout << "Drawing 1238:" << endl;
-  t1->Draw("Channel >> Peak1238", cut1238, "goff");
+  t1->Draw("Channel >> Peak1238", cut1238);
   cout << "Drawing 511:" << endl;
-  t1->Draw("Channel >> Peak511", cut511, "goff");
+  t1->Draw("Channel >> Peak511", cut511);
   cout << "Drawing 1771:" << endl;
-  t1->Draw("Channel >> Peak1771", cut1771, "goff");
+  t1->Draw("Channel >> Peak1771", cut1771);
   cout << "Drawing 1037:" << endl;
-  t1->Draw("Channel >> Peak1037", cut1037, "goff");
+  t1->Draw("Channel >> Peak1037", cut1037);
   cout << "Drawing 3254:" << endl;
-  t1->Draw("Channel >> Peak3254", cut3254, "goff");
+  t1->Draw("Channel >> Peak3254", cut3254);
   cout << "Drawing 2035:" << endl;
-  t1->Draw("Channel >> Peak2035", cut2035, "goff");
+  t1->Draw("Channel >> Peak2035", cut2035);
   cout << "Drawing 1360:" << endl;
-  t1->Draw("Channel >> Peak1360", cut1360, "goff");
+  t1->Draw("Channel >> Peak1360", cut1360);
   cout << "Drawing 3202:" << endl;
-  t1->Draw("Channel >> Peak3202", cut3202, "goff");
+  t1->Draw("Channel >> Peak3202", cut3202);
   cout << "Drawing 3451:" << endl;
-  t1->Draw("Channel >> Peak3451", cut3451, "goff");
+  t1->Draw("Channel >> Peak3451", cut3451);
 
    // Reduce each peak by their efficiency
   Peak2599->Scale(Efficiency[2]);
@@ -335,8 +348,8 @@ void plot_AllString_Co56Peaks() {
     }
     
     //Get channel
-    Channel = TMath::CeilNint(Peak2599->GetBinCenter(n+1));
-    
+    Channel = TMath::Ceil(Peak2599->GetBinCenter(n+1));
+
     //get # of events for each peak and find max
     Events_2599 = Peak2599->GetBinContent(n+1);
     Events_847 = Peak847->GetBinContent(n+1);
@@ -350,7 +363,11 @@ void plot_AllString_Co56Peaks() {
     Events_3202 = Peak3202->GetBinContent(n+1);
     Events_3451 = Peak3451->GetBinContent(n+1);
     
+
     Double_t Events[11] = {Events_2599, Events_847, Events_1238, Events_1771, Events_1037, Events_3254, Events_2035, Events_1360, Events_3202, Events_3451}; 
+
+    //cout << Events[11] << endl;
+
     // sort algorithm. There are definitely better ways to do this. But the ones I see are for c++0x/11, which is sad. So here we are with the dumb sort :`(
     if (Events_511 >= Events_2599) {
       Events_Max = Events_511;
@@ -783,6 +800,9 @@ void plot_AllString_Co56Peaks() {
     Rate_3202 = Events_3202 * time_scaling * 0.2778;
     Rate_3451 = Events_3451 * time_scaling * 0.2778;
 
+
+    //cout << "Rate 2599: " << Rate_2599 << " Events_2599: " << Events_2599 << endl;
+
     Rate_Max = Events_Max * time_scaling * 0.2778;
     Rate_Two = Events_Two * time_scaling * 0.2778;
     Rate_Three = Events_Three * time_scaling * 0.2778;
@@ -794,6 +814,7 @@ void plot_AllString_Co56Peaks() {
     Rate_Nine = Events_Nine * time_scaling * 0.2778;
     Rate_Ten = Events_Ten * time_scaling * 0.2778;   
     Rate_Min = Events_Min * time_scaling * 0.2778;
+
 
     Time_2599 = eventsToCalibrate / (86.0 * Rate_2599);
     Time_847 = eventsToCalibrate / (86.0 * Rate_847);
