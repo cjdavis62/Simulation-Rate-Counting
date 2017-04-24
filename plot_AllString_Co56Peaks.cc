@@ -51,7 +51,7 @@ using std::endl;
 using namespace RooFit;
 
 
-void plot_AllString_Co56Peaks(doube Time) {
+void plot_AllString_Co56Peaks(double Time) {
   
   ifstream EfficiencyFile;
   EfficiencyFile.open("Co56_PeakFits/Output/Efficiency.dat");
