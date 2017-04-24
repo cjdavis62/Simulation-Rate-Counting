@@ -51,7 +51,7 @@ using std::endl;
 using namespace RooFit;
 
 
-void plot_AllString_Co56Peaks(int Time) {
+void plot_AllString_Co56Peaks(doube Time) {
   
   ifstream EfficiencyFile;
   EfficiencyFile.open("Co56_PeakFits/Output/Efficiency.dat");
@@ -87,7 +87,7 @@ void plot_AllString_Co56Peaks(int Time) {
   
   int nbins = 988;
   int energy_bins = 200;
-  double time_scaling = 3600.0/double(Time); // scales from events to events per hour
+  double time_scaling = 3600.0/Time; // scales from events to events per hour
   cout << "Time Scaling: " << time_scaling << endl;
   
   double eventsToCalibrate = 50; // How many events to require for a channel to be calibrated

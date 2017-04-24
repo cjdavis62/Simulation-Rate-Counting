@@ -73,11 +73,11 @@ Double_t Acceptance_lineardoublegaus(Double_t offset, Double_t linear, Double_t 
   return (signal / (background+signal));
 }
 
-void plot_AllString_Th232Peaks() {
+void plot_AllString_Th232Peaks(double Time) {
 
   int nbins = 988;
   int energy_bins = 200;
-  double time_scaling = 0.01115; // scale from events to events per hour
+  double time_scaling = 3600.0/Time; // scales from events to events per hour
 
   double eventsToCalibrate = 50; // How many events to require for a channel to be calibrated
 
