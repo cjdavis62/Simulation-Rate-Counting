@@ -1,6 +1,13 @@
 /* 
 This script will take in the values from the efficiency file created by Fitting.py and then generate the root file with the rates for each peak
 
+This script requires the input of the total time from the calibration. This is seen in the Time histogram from the g4cuore processed file.
+
+Run the script as
+>root
+>.L plot_AllString_Co56Peaks.cc
+>plot_AllString_Co56Peaks(Time)
+
 Written by: Christopher Davis
 christopher.davis@yale.edu
 */
@@ -44,7 +51,7 @@ using std::endl;
 using namespace RooFit;
 
 
-void plot_AllString_Co56Peaks() {
+void plot_AllString_Co56Peaks(int Time) {
   
   ifstream EfficiencyFile;
   EfficiencyFile.open("Co56_PeakFits/Output/Efficiency.dat");
@@ -66,22 +73,23 @@ void plot_AllString_Co56Peaks() {
       Peak.push_back(var1);
       Efficiency.push_back(var2);
     }
-     
+  cout << "Efficiencies:" << endl;
   for (std::vector<Double_t>::const_iterator i = Efficiency.begin(); i != Efficiency.end(); ++i)
     {
-      std::cout << *i << " ";
+      std::cout << *i << " " << endl;;
     }
   
   TCut multiplicity = "Multiplicity == 1";
 
   // open the file and the tree
-  TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/Co56/Co56_w_new_g4cuore.root");
+  TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/Co56/Co56_w_r126_g4cuore.root");
   TTree* t1 = (TTree*)f1->Get("outTree");
   
   int nbins = 988;
   int energy_bins = 200;
-  double time_scaling = 0.01115; // scale from events to events per hour
-
+  double time_scaling = 3600.0/double(Time); // scales from events to events per hour
+  cout << "Time Scaling: " << time_scaling << endl;
+  
   double eventsToCalibrate = 50; // How many events to require for a channel to be calibrated
 
   // Empty histograms to be filled by tree
