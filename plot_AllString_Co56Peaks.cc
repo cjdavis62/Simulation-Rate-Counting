@@ -827,7 +827,6 @@ void plot_AllString_Co56Peaks() {
     Time_1360 = eventsToCalibrate / (86.0 * Rate_1360);
     Time_3202 = eventsToCalibrate / (86.0 * Rate_3202);
     Time_3451 = eventsToCalibrate / (86.0 * Rate_3451);
-    cout << "Time 3451: " << Time_3451 << endl;
 
     Time_Max = eventsToCalibrate / (86.0 * Rate_Min);
     Time_Two = eventsToCalibrate / (86.0 * Rate_Two);
