@@ -298,9 +298,9 @@ void plot_AllString_Co56Peaks() {
   tree->Branch("Rate_847", &Rate_847, "Rate_847/D");
   tree->Branch("CalibrationTime_847", &Time_847, "CalibrationTime_847/D");
   tree->Branch("Rate_1238", &Rate_1238, "Rate_1238/D");
-  tree->Branch("CalibrationTime_1238", &Time_1238, "CalibrationTime_591/D");
+  tree->Branch("CalibrationTime_1238", &Time_1238, "CalibrationTime_1238/D");
   tree->Branch("Rate_511", &Rate_511, "Rate_511/D");
-  tree->Branch("CalibrationTime_511", &Time_511, "CalibrationTime_591/D");
+  tree->Branch("CalibrationTime_511", &Time_511, "CalibrationTime_511/D");
   tree->Branch("Rate_1771", &Rate_1771, "Rate_1771/D");
   tree->Branch("CalibrationTime_1771", &Time_1771, "CalibrationTime_1771/D");
   tree->Branch("Rate_1037", &Rate_1037, "Rate_1037/D");
@@ -308,9 +308,9 @@ void plot_AllString_Co56Peaks() {
    tree->Branch("Rate_3254", &Rate_3254, "Rate_3254/D");
   tree->Branch("CalibrationTime_3254", &Time_3254, "CalibrationTime_3254/D");
   tree->Branch("Rate_2035", &Rate_2035, "Rate_2035/D");
-  tree->Branch("CalibrationTime_2035", &Time_2035, "CalibrationTime_591/D");
+  tree->Branch("CalibrationTime_2035", &Time_2035, "CalibrationTime_2035/D");
   tree->Branch("Rate_1360", &Rate_1360, "Rate_1360/D");
-  tree->Branch("CalibrationTime_1360", &Time_1360, "CalibrationTime_591/D");
+  tree->Branch("CalibrationTime_1360", &Time_1360, "CalibrationTime_1360/D");
   tree->Branch("Rate_3202", &Rate_3202, "Rate_3202/D");
   tree->Branch("CalibrationTime_3202", &Time_3202, "CalibrationTime_3202/D");
   tree->Branch("Rate_3451", &Rate_3451, "Rate_3451/D");
@@ -827,17 +827,18 @@ void plot_AllString_Co56Peaks() {
     Time_1360 = eventsToCalibrate / (86.0 * Rate_1360);
     Time_3202 = eventsToCalibrate / (86.0 * Rate_3202);
     Time_3451 = eventsToCalibrate / (86.0 * Rate_3451);
+    cout << "Time 3451: " << Time_3451 << endl;
 
     Time_Max = eventsToCalibrate / (86.0 * Rate_Min);
     Time_Two = eventsToCalibrate / (86.0 * Rate_Two);
     Time_Three = eventsToCalibrate / (86.0 * Rate_Three);
-    Time_Four = eventsToCalibrate / (86 * Rate_Four);
-    Time_Five = eventsToCalibrate / (86 * Rate_Five);
+    Time_Four = eventsToCalibrate / (86.0 * Rate_Four);
+    Time_Five = eventsToCalibrate / (86.0 * Rate_Five);
     Time_Six = eventsToCalibrate / (86.0 * Rate_Six);
     Time_Seven = eventsToCalibrate / (86.0 * Rate_Seven);
     Time_Eight = eventsToCalibrate / (86.0 * Rate_Eight);
-    Time_Nine = eventsToCalibrate / (86 * Rate_Nine);
-    Time_Ten = eventsToCalibrate / (86 * Rate_Ten);
+    Time_Nine = eventsToCalibrate / (86.0 * Rate_Nine);
+    Time_Ten = eventsToCalibrate / (86.0 * Rate_Ten);
     Time_Min = eventsToCalibrate / (86.0 * Rate_Max);
 
 
