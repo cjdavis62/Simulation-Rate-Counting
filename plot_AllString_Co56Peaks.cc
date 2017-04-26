@@ -82,7 +82,7 @@ void plot_AllString_Co56Peaks(double Time) {
   TCut multiplicity = "Multiplicity == 1";
 
   // open the file and the tree
-  TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/Co56/Co56_w_r126_g4cuore.root");
+  TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/Co56_100days/Co56_r126_g4cuore.root");
   TTree* t1 = (TTree*)f1->Get("outTree");
   
   int nbins = 988;
