@@ -77,7 +77,8 @@ void plot_AllString_Th232Peaks(double Time) {
 
   int nbins = 988;
   int energy_bins = 200;
-  double time_scaling = 3600.0/Time; // scales from events to events per hour
+  double time_scaling = 1.0/Time; // scales from events to events per second
+  cout << "time_scaling: " << time_scaling << endl;
 
   double eventsToCalibrate = 50; // How many events to require for a channel to be calibrated
 
@@ -87,7 +88,9 @@ void plot_AllString_Th232Peaks(double Time) {
   
   TCut multiplicity = "Multiplicity == 1";
 
-  TFile* f1 = new TFile("AllString_g4cuore.root");
+  //TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/HalfDown/AllString_g4cuore.root");
+  TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/05MayDeployment/AllString_g4cuore_r76.56.root");
+  //TFile* f1 = new TFile("/data-mgm/cuore/simulation/Calibration/AllString_g4cuore_test.root");
   TTree* t1 = (TTree*)f1->Get("outTree");
 
   TH1F* Peak2615 = new TH1F("Peak2615", "Peak2615", nbins, 0, 988);
@@ -458,9 +461,7 @@ void plot_AllString_Th232Peaks(double Time) {
     lineargaus->ReleaseParameter(i);
   }
   
-  THStack *hs = new THStack("hs", "All Peaks");
-  
-  TCut cut3 = "Ener1 > 2605";
+   TCut cut3 = "Ener1 > 2605";
   TCut cut4 = "Ener1 < 2625";
   TCut cut2615 = cut3 && cut4 && multiplicity;
 
@@ -487,33 +488,19 @@ void plot_AllString_Th232Peaks(double Time) {
   TCanvas* c2 = new TCanvas("c2", "c2", 600, 600);
   c2->cd();
 
-  t1->Draw("Channel >> Peak2615", cut2615);
-  t1->Draw("Channel >> Peak969", cut969);
-  t1->Draw("Channel >> Peak911", cut911);
-  t1->Draw("Channel >> Peak583", cut583);
-  t1->Draw("Channel >> Peak338", cut338);
-  t1->Draw("Channel >> Peak239", cut239);
+  t1->Draw("Detector >> Peak2615", cut2615, "goff");
+  t1->Draw("Detector >> Peak969", cut969, "goff");
+  t1->Draw("Detector >> Peak911", cut911, "goff");
+  t1->Draw("Detector >> Peak583", cut583, "goff");
+  t1->Draw("Detector >> Peak338", cut338, "goff");
+  t1->Draw("Detector >> Peak239", cut239, "goff");
 
-  TCanvas* c3 = new TCanvas("c3", "c3", 600, 600);
-  c3->cd();
-  Peak239->Draw();
-  c2->cd();
-
-  Peak2615->Scale(efficiency_2615);
-  Peak969->Scale(efficiency_969);
-  Peak911->Scale(efficiency_911);
-  Peak583->Scale(efficiency_583);
-  Peak338->Scale(efficiency_338);
-  Peak239->Scale(efficiency_239);
-  
-  //FullString->Scale(0.06923); // reduce to counts per hour
-  //FullString->Scale(0.2778); // reduce to mHz
-  /*
-  FullString->SetTitle("Channel | Ener1>501 && Ener1<521");
-  FullString->GetXaxis()->SetTitle("Channel");
-  FullString->GetYaxis()->SetTitle("Counts per hour per Channel");
-  FullString->SetFillColor(kBlue);
-  */
+  Peak2615->Scale(efficiency_2615 / (Time / 86400.0));
+  Peak969->Scale(efficiency_969 / (Time / 86400.0));
+  Peak911->Scale(efficiency_911 / (Time / 86400.0));
+  Peak583->Scale(efficiency_583 / (Time / 86400.0));
+  Peak338->Scale(efficiency_338 / (Time / 86400.0));
+  Peak239->Scale(efficiency_239 / (Time / 86400.0));
 
 
   Peak338->SetLineColor(kAzure);
@@ -523,18 +510,25 @@ void plot_AllString_Th232Peaks(double Time) {
   Peak583->SetLineColor(kRed);
   Peak239->SetLineColor(kCyan);
 
-  hs->Add(Peak2615);
-  hs->Add(Peak969);
-  hs->Add(Peak911);
-  hs->Add(Peak583);
-  hs->Add(Peak338);
-  hs->Add(Peak239);
+  Peak2615->Draw();
+  Peak969->Draw("SAME");
+  Peak911->Draw("SAME");
+  Peak583->Draw("SAME");
+  Peak338->Draw("Same");
+  Peak239->Draw("SAME");
 
-  hs->Draw("nostack");
-  hs->GetXaxis()->SetTitle("Channel");
-  hs->GetYaxis()->SetTitle("Peak Events/Channel");
-  hs->GetXaxis()->SetNdivisions(13,19, kFALSE);
+  Peak2615->GetXaxis()->SetTitle("Channel");
+  Peak2615->GetXaxis()->SetRangeUser(0,988);
+  
+  Peak2615->GetYaxis()->SetTitle("Peak Events per Day per Channel");
+  Peak2615->GetYaxis()->SetRangeUser(0.1,200);
+  Peak2615->GetXaxis()->SetNdivisions(13,19, kFALSE);
 
+  c2->SetGridx();
+  c2->SetLogy();
+  c2->SetTickx();
+  c2->SetTicky();
+  
 
   //create tree of events
 
@@ -754,37 +748,37 @@ void plot_AllString_Th232Peaks(double Time) {
       cout << "Events_Five: " << Events_Five << endl;
       cout << "Events_Min: " << Events_Min << endl;
       */
-      Rate_2615 = Events_2615 * time_scaling * 0.2778;
-      Rate_969 = Events_969 * time_scaling * 0.2778;
-      Rate_911 = Events_911 * time_scaling * 0.2778;
-      Rate_583 = Events_583 * time_scaling * 0.2778;
-      Rate_338 = Events_338 * time_scaling * 0.2778;
-      Rate_239 = Events_239 * time_scaling * 0.2778;
+      Rate_2615 = Events_2615 * (1000 / 86400.0); // convert from per day to mHz
+      Rate_969 = Events_969 * (1000 / 86400.0);
+      Rate_911 = Events_911 * (1000 / 86400.0);
+      Rate_583 = Events_583 * (1000 / 86400.0);
+      Rate_338 = Events_338 * (1000 / 86400.0);
+      Rate_239 = Events_239 * (1000 / 86400.0);
 
-      Rate_Max = Events_Max * time_scaling * 0.2778;
-      Rate_Min = Events_Min * time_scaling * 0.2778;
-      Rate_Two = Events_Two * time_scaling * 0.2778;
-      Rate_Three = Events_Three * time_scaling * 0.2778;
-      Rate_Four = Events_Four * time_scaling * 0.2778;
-      Rate_Five = Events_Five * time_scaling * 0.2778;
+      Rate_Max = Events_Max * (1000 / 86400.0);
+      Rate_Min = Events_Min * (1000 / 86400.0);
+      Rate_Two = Events_Two * (1000 / 86400.0);
+      Rate_Three = Events_Three * (1000 / 86400.0);
+      Rate_Four = Events_Four * (1000 / 86400.0);
+      Rate_Five = Events_Five * (1000 / 86400.0);
 
-      Time_2615 = eventsToCalibrate / (86.0 * Rate_2615);
-      Time_969 = eventsToCalibrate / (86.0 * Rate_969);
-      Time_911 = eventsToCalibrate / (86.0 * Rate_911);
-      Time_583 = eventsToCalibrate / (86.0 * Rate_583);
-      Time_338 = eventsToCalibrate / (86.0 * Rate_338);
-      Time_239 = eventsToCalibrate / (86.0 * Rate_239);
+      Time_2615 = eventsToCalibrate / Events_2615; // time in days to get the required total events to calibrate
+      Time_969 = eventsToCalibrate / Events_969;
+      Time_911 = eventsToCalibrate / Events_911;
+      Time_583 = eventsToCalibrate / Events_583;
+      Time_338 = eventsToCalibrate / Events_338;
+      Time_239 = eventsToCalibrate / Events_239;
  
-      Time_Min = eventsToCalibrate / (86.0 * Rate_Max);
-      Time_Max = eventsToCalibrate / (86.0 * Rate_Min);
-      Time_Two = eventsToCalibrate / (86.0 * Rate_Two);
-      Time_Three = eventsToCalibrate / (86.0 * Rate_Three);
-      Time_Four = eventsToCalibrate / (86 * Rate_Four);
-      Time_Five = eventsToCalibrate / (86 * Rate_Five);
+      Time_Min = eventsToCalibrate / Events_Max;
+      Time_Max = eventsToCalibrate / Events_Min;
+      Time_Two = eventsToCalibrate / Events_Two;
+      Time_Three = eventsToCalibrate / Events_Three;
+      Time_Four = eventsToCalibrate / Events_Four;
+      Time_Five = eventsToCalibrate / Events_Five;
 
 
       if (Rate_583 <= 0.1 || Rate_2615 <= 0.1 || Rate_969 <= 0.1 || Rate_911 <= 0.1 || Rate_338 <= 0.1 || Rate_239 <= 0.1) {
-	cout << "Rate Error " << endl;
+	cout << "Rate Error on channel: " << Channel << " on tower " << TMath::Floor(Channel/52.0) << endl;
 	cout << "Rate 583: " << Rate_583 << " Rate 2615: " << Rate_2615 << " Rate 969: " << Rate_969 << " Rate 911: " << Rate_911 << " Rate 338: " << Rate_338 << " Rate 239: " << Rate_239 <<endl;
       }
 
