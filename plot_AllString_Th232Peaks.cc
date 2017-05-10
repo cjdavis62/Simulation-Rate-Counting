@@ -2,7 +2,14 @@
 These peaks are then analyzed for the ratio of signal/background events
 With the number of signal events, it is then calculated how long it would take to get 50 events per channel per peak
 
-This script in particular is for Th232 spectra in a file called AllString_g4cuore.root
+This script in particular is for Th232 spectra in a file defined in the script (Search for TFile)
+
+To run:
+>root
+>.L plot_AllString_Th232Peaks.cc
+>plot_AllString_Th232Peaks(Time)
+
+where "Time" is the total time from the simulation (can be grabbed from the Time histogram from the g4cuore output file).
 
 Written by: Christopher Davis
 christopher.davis@yale.edu
@@ -56,7 +63,7 @@ Double_t Acceptance_lineargaus(Double_t offset, Double_t linear, Double_t amplit
   return (signal / (background+signal));
 }
 
-// Calculate the raio of signal events to the total number of events
+// Calculate the ratio of signal events to the total number of events
 Double_t Acceptance_lineardoublegaus(Double_t offset, Double_t linear, Double_t amplitude1, Double_t mean1, Double_t sigma1, Double_t amplitude2, Double_t mean2, Double_t sigma2, Double_t peak_window)
 {
   // Integrate the Background
