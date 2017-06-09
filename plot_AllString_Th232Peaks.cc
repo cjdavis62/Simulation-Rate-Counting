@@ -93,11 +93,14 @@ void plot_AllString_Th232Peaks(double Time) {
   Double_t peak_window_338 = 30; // 30 keV window for 338 double peak
   int energy_bins_338 = int(double(peak_window_338 / peak_window) * energy_bins); // 338 keV is a bit special here
   
-  TCut multiplicity = "Multiplicity == 1";
-
+  //  TCut multiplicity = "Multiplicity == 1";
+  TCut multiplicity ="Multiplicity < 1000"; // junk the multiplicity cut for now
   //TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/HalfDown/AllString_g4cuore.root");
-  TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/05MayDeployment/AllString_g4cuore_r76.56.root");
-  //TFile* f1 = new TFile("/data-mgm/cuore/simulation/Calibration/AllString_g4cuore_test.root");
+  //TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/05MayDeployment/AllString_g4cuore_r76.56.root");
+  //TFile *f1 = new TFile("/data-mgm/cuore/simulation/Calibration/PartialCalibrations/Inner_TopOfTowers/Inner_TopOfTowers_g4cuore.root");
+  //TFile* f1 = new TFile("/data-mgm/cuore/simulation/Calibration/AllString_g4cuore_DAQ.root");
+  //TFile* f1 = new TFile("/data-mgm/cuore/simulation/Calibration/ExtString_g4cuore_3_test.root");
+  TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/06Jun2017/06Jun2017_g4cuore.root");
   TTree* t1 = (TTree*)f1->Get("outTree");
 
   TH1F* Peak2615 = new TH1F("Peak2615", "Peak2615", nbins, 0, 988);
