@@ -1,6 +1,6 @@
 /* This script takes in a g4cuore processed ROOT File and performs fits to the peaks
 These peaks are then analyzed for the ratio of signal/background events
-With the number of signal events, it is then calculated how long it would take to get 50 events per channel per peak
+With the number of signal events, the rate for each peak is calculated for each channel
 
 This script in particular is for Th232 spectra in a file defined in the script (Search for TFile)
 
@@ -9,7 +9,7 @@ To run:
 >.L plot_AllString_Th232Peaks.cc
 >plot_AllString_Th232Peaks(Time)
 
-where "Time" is the total time from the simulation (can be grabbed from the Time histogram from the g4cuore output file).
+where "Time" is the total time from the simulation (can be grabbed from the Time histogram from the g4cuore output file)
 
 Written by: Christopher Davis
 christopher.davis@yale.edu
@@ -471,7 +471,9 @@ void plot_AllString_Th232Peaks(double Time) {
     lineargaus->ReleaseParameter(i);
   }
   
-   TCut cut3 = "Ener1 > 2605";
+  // Make the cuts for each of the peaks
+
+  TCut cut3 = "Ener1 > 2605";
   TCut cut4 = "Ener1 < 2625";
   TCut cut2615 = cut3 && cut4 && multiplicity;
 
@@ -505,6 +507,8 @@ void plot_AllString_Th232Peaks(double Time) {
   t1->Draw("Detector >> Peak338", cut338, "goff");
   t1->Draw("Detector >> Peak239", cut239, "goff");
 
+
+  // Scale each peak to be just the signal events and to get the rate in counts per day
   Peak2615->Scale(efficiency_2615 / (Time / 86400.0));
   Peak969->Scale(efficiency_969 / (Time / 86400.0));
   Peak911->Scale(efficiency_911 / (Time / 86400.0));
@@ -788,7 +792,7 @@ void plot_AllString_Th232Peaks(double Time) {
 
 
       if (Rate_583 <= 0.1 || Rate_2615 <= 0.1 || Rate_969 <= 0.1 || Rate_911 <= 0.1 || Rate_338 <= 0.1 || Rate_239 <= 0.1) {
-	cout << "Rate Error on channel: " << Channel << " on tower " << TMath::Floor(Channel/52.0) << endl;
+	cout << "Rate very low on channel: " << Channel << " on tower " << TMath::Floor(Channel/52.0) << endl;
 	cout << "Rate 583: " << Rate_583 << " Rate 2615: " << Rate_2615 << " Rate 969: " << Rate_969 << " Rate 911: " << Rate_911 << " Rate 338: " << Rate_338 << " Rate 239: " << Rate_239 <<endl;
       }
 
