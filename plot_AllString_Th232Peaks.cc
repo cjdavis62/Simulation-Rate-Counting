@@ -87,20 +87,27 @@ void plot_AllString_Th232Peaks(double Time) {
   double time_scaling = 1.0/Time; // scales from events to events per second
   cout << "time_scaling: " << time_scaling << endl;
 
-  double eventsToCalibrate = 50; // How many events to require for a channel to be calibrated
+  double eventsToCalibrate = 30; // How many events to require for a channel to be calibrated
 
   Double_t peak_window = 20; // 20 keV window
   Double_t peak_window_338 = 30; // 30 keV window for 338 double peak
   int energy_bins_338 = int(double(peak_window_338 / peak_window) * energy_bins); // 338 keV is a bit special here
   
-  //  TCut multiplicity = "Multiplicity == 1";
-  TCut multiplicity ="Multiplicity < 1000"; // junk the multiplicity cut for now
+  //TCut multiplicity = "Multiplicity == 1";
+  TCut multiplicity ="Multiplicity != -1"; // junk the multiplicity cut for now
   //TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/HalfDown/AllString_g4cuore.root");
   //TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/05MayDeployment/AllString_g4cuore_r76.56.root");
   //TFile *f1 = new TFile("/data-mgm/cuore/simulation/Calibration/PartialCalibrations/Inner_TopOfTowers/Inner_TopOfTowers_g4cuore.root");
   //TFile* f1 = new TFile("/data-mgm/cuore/simulation/Calibration/AllString_g4cuore_DAQ.root");
   //TFile* f1 = new TFile("/data-mgm/cuore/simulation/Calibration/ExtString_g4cuore_3_test.root");
-  TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/06Jun2017/06Jun2017_g4cuore.root");
+  //TFile* f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/27July2017Deployment/28Jul2017_g4cuore.root");
+  // TFile * f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/FourStrings/FourStrings_g4cuore.root");
+  //TFile * f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/Sep2017Deployment/Sep2017Calibration_g4cuore.root");
+  //TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/05May2017/05May2017Calib_g4cuore.root");
+  TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/19Apr2018/19Apr2018_g4cuore.root");
+  //TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/19Apr2018/19Apr2018_g4cuore_halfwindow.root");
+  
+  
   TTree* t1 = (TTree*)f1->Get("outTree");
 
   TH1F* Peak2615 = new TH1F("Peak2615", "Peak2615", nbins, 0, 988);
@@ -109,6 +116,7 @@ void plot_AllString_Th232Peaks(double Time) {
   TH1F* Peak583 = new TH1F("Peak583", "Peak583", nbins, 0, 988);
   TH1F* Peak338 = new TH1F("Peak338", "Peak338", nbins, 0, 988);
   TH1F* Peak239 = new TH1F("Peak239", "Peak239", nbins, 0, 988);
+  TH1F* TotalEventRate = new TH1F("TotalEventRate", "TotalEventRate", nbins, 0, 988);
   
   TH1F* Energy2615 = new TH1F("Energy2615", "Energy2615", energy_bins, (2615 - peak_window/2), (2615 + peak_window/2));
   TH1F* Energy969 = new TH1F("Energy969", "Energy969", energy_bins, (969 - peak_window/2), (968 + peak_window/2));
@@ -497,7 +505,7 @@ void plot_AllString_Th232Peaks(double Time) {
   TCut cut14 = "Ener1 < 249";
   TCut cut239 = cut13 && cut14 && multiplicity;
 
-  TCanvas* c2 = new TCanvas("c2", "c2", 600, 600);
+  TCanvas* c2 = new TCanvas("c2", "c2", 1200, 600);
   c2->cd();
 
   t1->Draw("Detector >> Peak2615", cut2615, "goff");
@@ -506,16 +514,28 @@ void plot_AllString_Th232Peaks(double Time) {
   t1->Draw("Detector >> Peak583", cut583, "goff");
   t1->Draw("Detector >> Peak338", cut338, "goff");
   t1->Draw("Detector >> Peak239", cut239, "goff");
+  t1->Draw("Detector >> TotalEventRate");
 
 
   // Scale each peak to be just the signal events and to get the rate in counts per day
-  Peak2615->Scale(efficiency_2615 / (Time / 86400.0));
+
+  Peak2615->Scale(1.0 / (Time / 86400.0));
+  Peak969->Scale(1.0 / (Time / 86400.0));
+  Peak911->Scale(1.0 / (Time / 86400.0));
+  Peak583->Scale(1.0 / (Time / 86400.0));
+  Peak338->Scale(1.0 / (Time / 86400.0));
+  Peak239->Scale(1.0 / (Time / 86400.0));
+
+  // Get total rate in mHz
+  TotalEventRate->Scale(1.0 / (Time / 1000));
+
+  /*Peak2615->Scale(efficiency_2615 / (Time / 86400.0));
   Peak969->Scale(efficiency_969 / (Time / 86400.0));
   Peak911->Scale(efficiency_911 / (Time / 86400.0));
   Peak583->Scale(efficiency_583 / (Time / 86400.0));
   Peak338->Scale(efficiency_338 / (Time / 86400.0));
   Peak239->Scale(efficiency_239 / (Time / 86400.0));
-
+  */
 
   Peak338->SetLineColor(kAzure);
   Peak2615->SetLineColor(kSpring);
@@ -535,13 +555,33 @@ void plot_AllString_Th232Peaks(double Time) {
   Peak2615->GetXaxis()->SetRangeUser(0,988);
   
   Peak2615->GetYaxis()->SetTitle("Peak Events per Day per Channel");
-  Peak2615->GetYaxis()->SetRangeUser(0.1,200);
-  Peak2615->GetXaxis()->SetNdivisions(13,19, kFALSE);
+  Peak2615->GetYaxis()->SetRangeUser(1,500);
+  Bool_t setNdiv_value = kFALSE;
+  Peak2615->GetXaxis()->SetNdivisions(1319, setNdiv_value);
 
   c2->SetGridx();
   c2->SetLogy();
   c2->SetTickx();
   c2->SetTicky();
+  c2->Update();
+
+  //
+  TCanvas * c3 = new TCanvas("c3", "c3", 1200, 600);
+  c3->cd();
+
+  TotalEventRate->Draw();
+  TotalEventRate->GetXaxis()->SetTitle("Channel");
+  TotalEventRate->GetXaxis()->SetRangeUser(0,988);
+  
+  TotalEventRate->GetYaxis()->SetTitle("Events Rate [mHz]");
+  TotalEventRate->GetYaxis()->SetRangeUser(1,100);
+  TotalEventRate->GetXaxis()->SetNdivisions(1319, setNdiv_value);
+
+  c3->SetGridx();
+  c3->SetLogy();
+  c3->SetTickx();
+  c3->SetTicky();
+  c3->Update();
   
 
   //create tree of events
@@ -607,6 +647,8 @@ void plot_AllString_Th232Peaks(double Time) {
   Int_t Calib_Peak583and969and911 = 0;
   Int_t Calib_Peak2615and969and911 = 0;
 
+  Double_t Event_Rate;
+  
   tree->Branch("Rate_2615", &Rate_2615, "Rate_2615/D");
   tree->Branch("CalibrationTime_2615", &Time_2615, "CalibrationTime_2615/D");
   tree->Branch("Rate_969", &Rate_969, "Rate_969/D");
@@ -635,10 +677,13 @@ void plot_AllString_Th232Peaks(double Time) {
 
   tree->Branch("Channel", &Channel, "Channel/I");
 
+  tree->Branch("Event_Rate", &Event_Rate, "EventRate/D");
+  
     for (int n = 0; n < nbins; n++) {
 
       //Get channel
       Channel = TMath::CeilNint(Peak2615->GetBinCenter(n+1));
+      Event_Rate = TotalEventRate->GetBinContent(n+1);
       //get # of events for each peak and find max
       Events_2615 = Peak2615->GetBinContent(n+1);
       Events_969 = Peak969->GetBinContent(n+1);
@@ -791,10 +836,10 @@ void plot_AllString_Th232Peaks(double Time) {
       Time_Five = eventsToCalibrate / Events_Five;
 
 
-      if (Rate_583 <= 0.1 || Rate_2615 <= 0.1 || Rate_969 <= 0.1 || Rate_911 <= 0.1 || Rate_338 <= 0.1 || Rate_239 <= 0.1) {
+      /*if (Rate_583 <= 0.1 || Rate_2615 <= 0.1 || Rate_969 <= 0.1 || Rate_911 <= 0.1 || Rate_338 <= 0.1 || Rate_239 <= 0.1) {
 	cout << "Rate very low on channel: " << Channel << " on tower " << TMath::Floor(Channel/52.0) << endl;
 	cout << "Rate 583: " << Rate_583 << " Rate 2615: " << Rate_2615 << " Rate 969: " << Rate_969 << " Rate 911: " << Rate_911 << " Rate 338: " << Rate_338 << " Rate 239: " << Rate_239 <<endl;
-      }
+	}*/
 
       tree->Fill();
     }
