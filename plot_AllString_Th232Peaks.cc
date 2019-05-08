@@ -9,7 +9,7 @@ To run:
 >.L plot_AllString_Th232Peaks.cc
 >plot_AllString_Th232Peaks(Time)
 
-where "Time" is the total time from the simulation (can be grabbed from the Time histogram from the g4cuore output file)
+where "Time" is the total time (in seconds) from the simulation (can be grabbed from the Time histogram from the g4cuore output file)
 
 Written by: Christopher Davis
 christopher.davis@yale.edu
@@ -87,7 +87,7 @@ void plot_AllString_Th232Peaks(double Time) {
   double time_scaling = 1.0/Time; // scales from events to events per second
   cout << "time_scaling: " << time_scaling << endl;
 
-  double eventsToCalibrate = 30; // How many events to require for a channel to be calibrated
+  double eventsToCalibrate = 50; // How many events to require for a channel to be calibrated
 
   Double_t peak_window = 20; // 20 keV window
   Double_t peak_window_338 = 30; // 30 keV window for 338 double peak
@@ -104,12 +104,19 @@ void plot_AllString_Th232Peaks(double Time) {
   // TFile * f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/FourStrings/FourStrings_g4cuore.root");
   //TFile * f1 = new TFile("/data-mgm/cuore/scratch/simulation_scratch/Sep2017Deployment/Sep2017Calibration_g4cuore.root");
   //TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/05May2017/05May2017Calib_g4cuore.root");
-  TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/19Apr2018/19Apr2018_g4cuore.root");
+  //TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/19Apr2018/19Apr2018_g4cuore.root");
   //TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/19Apr2018/19Apr2018_g4cuore_halfwindow.root");
-  
+  //TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/06Jun2017_remake_2/06Jun2017_g4cuore.root");
+  //TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/3MotionBoxes/NoMB4_g4cuore.root");
+  //TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/Full_Calib/Full_Calib_g4cuore.root");
+  //TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/19Apr2018/19Apr2018_g4cuore.root");
+  //TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/3MotionBoxes_1ExtSource/NoMB4_external_g4cuore.root");
+  //TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/3MotionBoxes_1ExtSource/NoMB4_external10x_g4cuore.root");
+  TFile * f1 = new TFile("/projects/cuore/simulation/Calibration/Sep2017/Sep2017Calibration_g4cuore_2.root");
   
   TTree* t1 = (TTree*)f1->Get("outTree");
 
+  // Make the histograms to be used here
   TH1F* Peak2615 = new TH1F("Peak2615", "Peak2615", nbins, 0, 988);
   TH1F* Peak969 = new TH1F("Peak969", "Peak969", nbins, 0, 988);
   TH1F* Peak911 = new TH1F("Peak911", "Peak911", nbins, 0, 988);
@@ -162,7 +169,8 @@ void plot_AllString_Th232Peaks(double Time) {
   RooRealVar doublegausfrac("doublegausfrac", "fraction of gaussians", 0.8, 0, 1);
   RooAddPdf doublegausslin("doublegausslin", "doublegaus+p2", RooArgList(doublegaus, p2), RooArgList(doublegausfrac));
 
-  TCanvas * c5 = new TCanvas("c5", "Roofit", 1200, 1000);
+  // The canvas showing the RooFit results
+  TCanvas * c5 = new TCanvas("c5", "RooFit", 1200, 1000);
   c5->cd();
   c5->Divide(3,2);
   c5->cd(1);
@@ -191,6 +199,7 @@ void plot_AllString_Th232Peaks(double Time) {
 
   frame2615->Draw();
 
+  // The canvas showing the ROOT fit
   TCanvas * c4 = new TCanvas("c4", "ROOT fit", 1200, 1000);
   c4->cd();
   c4->Divide(3,2);
@@ -519,23 +528,23 @@ void plot_AllString_Th232Peaks(double Time) {
 
   // Scale each peak to be just the signal events and to get the rate in counts per day
 
-  Peak2615->Scale(1.0 / (Time / 86400.0));
-  Peak969->Scale(1.0 / (Time / 86400.0));
-  Peak911->Scale(1.0 / (Time / 86400.0));
-  Peak583->Scale(1.0 / (Time / 86400.0));
-  Peak338->Scale(1.0 / (Time / 86400.0));
-  Peak239->Scale(1.0 / (Time / 86400.0));
+  //Peak2615->Scale(1.0 / (Time / 86400.0));
+  //Peak969->Scale(1.0 / (Time / 86400.0));
+  //Peak911->Scale(1.0 / (Time / 86400.0));
+  //Peak583->Scale(1.0 / (Time / 86400.0));
+  //Peak338->Scale(1.0 / (Time / 86400.0));
+  //Peak239->Scale(1.0 / (Time / 86400.0));
 
   // Get total rate in mHz
   TotalEventRate->Scale(1.0 / (Time / 1000));
 
-  /*Peak2615->Scale(efficiency_2615 / (Time / 86400.0));
+  Peak2615->Scale(efficiency_2615 / (Time / 86400.0));
   Peak969->Scale(efficiency_969 / (Time / 86400.0));
   Peak911->Scale(efficiency_911 / (Time / 86400.0));
   Peak583->Scale(efficiency_583 / (Time / 86400.0));
   Peak338->Scale(efficiency_338 / (Time / 86400.0));
   Peak239->Scale(efficiency_239 / (Time / 86400.0));
-  */
+  
 
   Peak338->SetLineColor(kAzure);
   Peak2615->SetLineColor(kSpring);
@@ -679,10 +688,10 @@ void plot_AllString_Th232Peaks(double Time) {
 
   tree->Branch("Event_Rate", &Event_Rate, "EventRate/D");
   
-    for (int n = 0; n < nbins; n++) {
+    for (int n = 1; n <= nbins; n++) {
 
       //Get channel
-      Channel = TMath::CeilNint(Peak2615->GetBinCenter(n+1));
+      Channel = TMath::FloorNint(Peak2615->GetBinCenter(n+1));
       Event_Rate = TotalEventRate->GetBinContent(n+1);
       //get # of events for each peak and find max
       Events_2615 = Peak2615->GetBinContent(n+1);
@@ -692,6 +701,9 @@ void plot_AllString_Th232Peaks(double Time) {
       Events_338 = Peak338->GetBinContent(n+1);
       Events_239 = Peak239->GetBinContent(n+1);
 
+      std::cout << n << " " << Channel << " " << Events_2615 << std::endl;
+
+      
       Double_t Events[6] = {Events_2615, Events_969, Events_911, Events_338, Events_239};
 
       // sort algorithm
